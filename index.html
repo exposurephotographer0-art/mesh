@@ -656,6 +656,126 @@
     letter-spacing: 0.5px;
     margin-left: 4px;
   }
+
+  /* ── QUEUE TABLES ── */
+  .queue-group { margin-bottom: 20px; }
+  .queue-group-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px 14px;
+    border-radius: var(--radius) var(--radius) 0 0;
+    border: 1px solid var(--border);
+    border-bottom: none;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .queue-group-header .qg-count {
+    font-size: 11px;
+    font-weight: 500;
+    color: rgba(255,255,255,0.7);
+    margin-left: auto;
+  }
+  .queue-group-body {
+    border: 1px solid var(--border);
+    border-radius: 0 0 var(--radius) var(--radius);
+    overflow: hidden;
+  }
+  .queue-item {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: #fff;
+    border-bottom: 1px solid var(--border-light);
+    transition: background 0.1s, box-shadow 0.1s;
+    cursor: default;
+  }
+  .queue-item:last-child { border-bottom: none; }
+  .queue-item:hover { background: #f8fafc; }
+  .queue-item.dragging {
+    opacity: 0.5;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+  }
+  .queue-item.drag-over {
+    border-top: 2px solid var(--accent);
+    background: #eff6ff;
+  }
+  .drag-handle {
+    width: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    color: #cbd5e1;
+    font-size: 16px;
+    padding: 8px 0;
+    flex-shrink: 0;
+    user-select: none;
+  }
+  .drag-handle:hover { color: var(--accent); }
+  .drag-handle:active { cursor: grabbing; }
+  .queue-pos {
+    width: 28px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .queue-item-body {
+    flex: 1;
+    display: grid;
+    gap: 0;
+    padding: 6px 8px;
+    min-width: 0;
+  }
+  .qi-name { font-size: 12px; font-weight: 600; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .qi-meta { font-size: 10px; color: var(--muted); display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 2px; }
+  .qi-actions { display: flex; gap: 3px; align-items: center; padding: 6px 8px; flex-shrink: 0; }
+  .qi-shifts-input {
+    width: 50px;
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 2px 5px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    outline: none;
+    text-align: center;
+  }
+  .qi-shifts-input:focus { border-color: var(--accent); }
+
+  /* Area-change dropdown in queue row */
+  .qi-area-select {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 2px 4px;
+    font-family: var(--font-mono);
+    font-size: 11px;
+    outline: none;
+    cursor: pointer;
+  }
+  .qi-area-select:focus { border-color: var(--accent); }
+
+  /* Gantt drag styles */
+  .sg-pill[draggable="true"] { cursor: grab; }
+  .sg-pill[draggable="true"]:active { cursor: grabbing; opacity: 0.6; }
+  .sg-pill.pill-dragging { opacity: 0.35 !important; }
+  .sg-data.drop-target {
+    background: #dbeafe !important;
+    outline: 2px dashed var(--accent);
+    outline-offset: -2px;
+  }
+  .sg-data.drop-forbidden {
+    background: #fee2e2 !important;
+    outline: 2px dashed var(--warn);
+    outline-offset: -2px;
+  }
+
 </style>
 </head>
 <body>
@@ -742,38 +862,24 @@
   <div id="page-meshes" class="page">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Mesh Production</div>
-      <button class="btn btn-primary" onclick="openMeshModal()">+ New Mesh</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted)">Drag ⠿ to reorder within area</span>
+        <button class="btn btn-primary" onclick="openMeshModal()">+ New Mesh</button>
+      </div>
     </div>
-    <div class="card">
-      <table class="data-table" id="mesh-table">
-        <thead>
-          <tr>
-            <th>Name</th><th>Area</th><th>Shifts Req.</th><th>Done</th>
-            <th>Status</th><th>Storage</th><th>Cage</th><th>Start Shift</th><th>Progress</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="mesh-tbody"></tbody>
-      </table>
-    </div>
+    <div id="mesh-queue-groups"></div>
   </div>
 
   <!-- ── CAGES ── -->
   <div id="page-cages" class="page">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Cage Build Programme</div>
-      <button class="btn btn-primary" onclick="openCageModal()">+ New Cage</button>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted)">Drag ⠿ to reorder · change VST in dropdown to move bay</span>
+        <button class="btn btn-primary" onclick="openCageModal()">+ New Cage</button>
+      </div>
     </div>
-    <div class="card">
-      <table class="data-table" id="cage-table">
-        <thead>
-          <tr>
-            <th>Name</th><th>VST Area</th><th>Shifts Req.</th><th>Done</th>
-            <th>Status</th><th>Meshes</th><th>Start Shift</th><th>Progress</th><th>Actions</th>
-          </tr>
-        </thead>
-        <tbody id="cage-tbody"></tbody>
-      </table>
-    </div>
+    <div id="cage-queue-groups"></div>
   </div>
 
   <!-- ── STORAGE MAP ── -->
@@ -1118,41 +1224,181 @@ function progressBar(done, req) {
 }
 
 // ═══════════════════════════════════════════════════════
-// MESH TABLE
+// RESEQUENCE HELPERS  (shared by mesh + cage)
+// ═══════════════════════════════════════════════════════
+
+// Recompute start_shifts for an ordered array of items starting from startShift
+// Returns array of {id, start_shift} update objects
+function computeSequence(orderedItems, startShift = 1) {
+  let cursor = startShift;
+  return orderedItems.map(item => {
+    const s = cursor;
+    cursor += Math.ceil(item.shifts_required || 1);
+    return { id: item.id, start_shift: s };
+  });
+}
+
+// Save a sequence of {id, start_shift} updates to the API (meshes or cages)
+async function saveSequence(updates, type = 'cages') {
+  for (const u of updates) {
+    const updated = await api(`/api/${type}/${u.id}`, 'PUT', { start_shift: u.start_shift });
+    if (type === 'cages') {
+      cages = cages.map(c => c.id === u.id ? { ...updated, meshes: c.meshes } : c);
+    } else {
+      meshes = meshes.map(m => m.id === u.id ? updated : m);
+    }
+  }
+}
+
+// Resequence all items in a given area/VST from shift 1
+async function resequenceArea(area, type = 'cages') {
+  let queue;
+  if (type === 'cages') {
+    queue = cages.filter(c => c.vst_area === area && c.start_shift != null)
+                 .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
+  } else {
+    queue = meshes.filter(m => m.area === area && m.start_shift != null)
+                  .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
+  }
+  const updates = computeSequence(queue, 1);
+  await saveSequence(updates, type);
+}
+
+// Move item at fromIdx to toIdx within its area queue, then resequence
+async function moveItemInQueue(id, toIdx, area, type = 'cages') {
+  let queue;
+  if (type === 'cages') {
+    queue = cages.filter(c => c.vst_area === area && c.start_shift != null)
+                 .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
+  } else {
+    queue = meshes.filter(m => m.area === area && m.start_shift != null)
+                  .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
+  }
+  const fromIdx = queue.findIndex(x => x.id === id);
+  if (fromIdx === -1 || fromIdx === toIdx) return;
+  const [item] = queue.splice(fromIdx, 1);
+  queue.splice(toIdx, 0, item);
+  const updates = computeSequence(queue, 1);
+  await saveSequence(updates, type);
+  renderAll();
+  showToast('Order updated ✓');
+}
+
+// Move item to a different area entirely, appending to end of that area's queue
+async function moveItemToArea(id, newArea, type = 'cages') {
+  if (type === 'cages') {
+    const cage = cages.find(c => c.id === id);
+    if (!cage || cage.vst_area === newArea) return;
+    const oldArea = cage.vst_area;
+    // Remove from old area, resequence old
+    const updated = await api(`/api/cages/${id}`, 'PUT', { vst_area: newArea, start_shift: null });
+    cages = cages.map(c => c.id === id ? { ...updated, meshes: c.meshes } : c);
+    await resequenceArea(oldArea, 'cages');
+    // Append to end of new area
+    const newQueue = cages.filter(c => c.vst_area === newArea && c.start_shift != null)
+                          .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+    const last = newQueue[newQueue.length - 1];
+    const newStart = last ? (last.start_shift + Math.ceil(last.shifts_required)) : 1;
+    const final = await api(`/api/cages/${id}`, 'PUT', { start_shift: newStart });
+    cages = cages.map(c => c.id === id ? { ...final, meshes: c.meshes } : c);
+  } else {
+    const mesh = meshes.find(m => m.id === id);
+    if (!mesh || mesh.area === newArea) return;
+    const oldArea = mesh.area;
+    const updated = await api(`/api/meshes/${id}`, 'PUT', { area: newArea, start_shift: null });
+    meshes = meshes.map(m => m.id === id ? updated : m);
+    await resequenceArea(oldArea, 'meshes');
+    const newQueue = meshes.filter(m => m.area === newArea && m.start_shift != null)
+                           .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+    const last = newQueue[newQueue.length - 1];
+    const newStart = last ? (last.start_shift + Math.ceil(last.shifts_required)) : 1;
+    const final = await api(`/api/meshes/${id}`, 'PUT', { start_shift: newStart });
+    meshes = meshes.map(m => m.id === id ? final : m);
+  }
+  renderAll();
+  showToast('Moved ✓');
+}
+
+function renderAll() {
+  renderMeshTable(); renderCageTable(); renderDashboard(); updateHeader();
+  if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
+}
+
+// ═══════════════════════════════════════════════════════
+// DRAG STATE
+// ═══════════════════════════════════════════════════════
+let dragState = { id: null, area: null, type: null, fromIdx: null };
+
+// ═══════════════════════════════════════════════════════
+// MESH TABLE (queue-grouped)
 // ═══════════════════════════════════════════════════════
 function renderMeshTable() {
-  const tbody = document.getElementById('mesh-tbody');
-  tbody.innerHTML = meshes.map(m => {
-    const pct = m.shifts_required > 0 ? Math.min(100, m.shifts_completed/m.shifts_required*100) : 0;
-    const cageName = m.cage_id ? (cages.find(c=>c.id===m.cage_id)?.name || m.cage_id) : '—';
-    return `<tr>
-      <td style="font-weight:500">${m.name}</td>
-      <td><span class="area-pill area-${m.area}">${m.area}</span></td>
-      <td>
-        <div class="inline-edit">
-          <input type="number" step="0.5" min="0.5" value="${m.shifts_required}" style="width:55px"
-            onchange="quickUpdateMesh('${m.id}','shifts_required',this.value)">
-        </div>
-      </td>
-      <td>
-        <div class="inline-edit">
-          <input type="number" step="0.5" min="0" value="${m.shifts_completed}" style="width:55px"
-            onchange="quickUpdateMesh('${m.id}','shifts_completed',this.value)">
-        </div>
-      </td>
-      <td><span class="badge badge-${m.status}">${m.status.replace('_',' ')}</span></td>
-      <td>${m.storage_area || '—'}</td>
-      <td style="font-size:11px;color:var(--muted)">${cageName}</td>
-      <td>${m.start_shift || '—'}</td>
-      <td>${progressBar(m.shifts_completed, m.shifts_required)}</td>
-      <td>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="openMeshModal('${m.id}')">✎</button>
-          <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="deleteMesh('${m.id}')">✕</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="10" style="color:var(--muted);text-align:center;padding:24px">No meshes yet — click <strong>+ New Mesh</strong> to add one</td></tr>`;
+  const container = document.getElementById('mesh-queue-groups');
+  if (!container) return;
+  const areaColors = { M1:'#059669',M2:'#65a30d',M3:'#0284c7',M4:'#6d28d9',M5:'#be185d' };
+  const areaBgs    = { M1:'#065f46',M2:'#3f6212',M3:'#0c4a6e',M4:'#4c1d95',M5:'#831843' };
+
+  let html = '';
+  ['M1','M2','M3','M4','M5'].forEach(area => {
+    const items = meshes.filter(m => m.area === area)
+                        .sort((a,b) => (a.start_shift||999999) - (b.start_shift||999999));
+    const unscheduled = meshes.filter(m => m.area === area && m.start_shift == null);
+    const all = [...items, ...unscheduled.filter(u => !items.find(i=>i.id===u.id))];
+    const col = areaColors[area];
+    const bg  = areaBgs[area];
+
+    html += `<div class="queue-group" id="mesh-group-${area}">
+      <div class="queue-group-header" style="background:${bg};color:#fff;border-color:${col}">
+        <span class="area-pill area-${area}" style="font-size:11px">${area}</span>
+        <span style="font-size:13px">Mesh Production Area</span>
+        <span class="qg-count">${all.length} mesh${all.length!==1?'es':''}</span>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:none;margin-left:8px" onclick="openMeshModal()">+ Add</button>
+      </div>
+      <div class="queue-group-body" id="mesh-body-${area}">`;
+
+    if (!all.length) {
+      html += `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">No meshes in ${area} yet</div>`;
+    } else {
+      all.forEach((m, idx) => {
+        const cageName = m.cage_id ? (cages.find(c=>c.id===m.cage_id)?.name||'cage') : null;
+        const pct = m.shifts_required > 0 ? Math.min(100,m.shifts_completed/m.shifts_required*100) : 0;
+        html += `<div class="queue-item" id="qi-${m.id}"
+          draggable="true"
+          ondragstart="onQueueDragStart(event,'${m.id}','${area}','meshes',${idx})"
+          ondragover="onQueueDragOver(event,'${m.id}')"
+          ondrop="onQueueDrop(event,'${m.id}','${area}','meshes')"
+          ondragleave="onQueueDragLeave(event)"
+          ondragend="onQueueDragEnd(event)">
+          <div class="drag-handle" title="Drag to reorder">⠿</div>
+          <div class="queue-pos">${idx+1}</div>
+          <div class="queue-item-body">
+            <div class="qi-name">${m.name}</div>
+            <div class="qi-meta">
+              <span class="badge badge-${m.status}">${m.status.replace('_',' ')}</span>
+              <span>Req: <input class="qi-shifts-input" type="number" step="0.5" min="0.5" value="${m.shifts_required}" onchange="quickUpdateMesh('${m.id}','shifts_required',this.value)" title="Shifts required"></span>
+              <span>Done: <input class="qi-shifts-input" type="number" step="0.5" min="0" value="${m.shifts_completed}" onchange="quickUpdateMesh('${m.id}','shifts_completed',this.value)" title="Shifts completed"></span>
+              ${m.start_shift ? `<span style="color:var(--accent)">Shift ${m.start_shift}</span>` : '<span style="color:var(--muted)">Unscheduled</span>'}
+              ${cageName ? `<span>→ ${cageName}</span>` : ''}
+              ${m.storage_area ? `<span>📦 ${m.storage_area}</span>` : ''}
+              <select class="qi-area-select" onchange="onMeshAreaChange('${m.id}',this.value)" title="Move to area">
+                ${['M1','M2','M3','M4','M5'].map(a=>`<option value="${a}"${a===area?' selected':''}>${a}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div style="padding:6px 8px;min-width:90px">${progressBar(m.shifts_completed,m.shifts_required)}</div>
+          <div class="qi-actions">
+            <button class="btn btn-secondary btn-sm btn-icon" title="Move up" onclick="queueMoveUp('${m.id}','${area}','meshes')" ${idx===0?'disabled':''}>↑</button>
+            <button class="btn btn-secondary btn-sm btn-icon" title="Move down" onclick="queueMoveDown('${m.id}','${area}','meshes',${all.length})" ${idx===all.length-1?'disabled':''}>↓</button>
+            <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="openMeshModal('${m.id}')">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="deleteMesh('${m.id}')">✕</button>
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html || `<div style="padding:40px;text-align:center;color:var(--muted)">No meshes yet</div>`;
 }
 
 async function quickUpdateMesh(id, field, value) {
@@ -1160,56 +1406,100 @@ async function quickUpdateMesh(id, field, value) {
     const updated = await api(`/api/meshes/${id}`, 'PUT', { [field]: parseFloat(value) });
     const idx = meshes.findIndex(m=>m.id===id);
     if (idx > -1) meshes[idx] = updated;
-    renderDashboard();
-    updateHeader();
+    // If shifts_required changed, resequence the area
+    if (field === 'shifts_required') {
+      const m = meshes.find(x=>x.id===id);
+      if (m?.start_shift) await resequenceArea(m.area, 'meshes');
+    }
+    renderAll();
     showToast('Updated ✓');
   } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function onMeshAreaChange(id, newArea) {
+  try { await moveItemToArea(id, newArea, 'meshes'); }
+  catch(e) { showToast(e.message,'error'); }
 }
 
 async function deleteMesh(id) {
   if (!confirm('Delete this mesh?')) return;
   try {
+    const m = meshes.find(x=>x.id===id);
     await api(`/api/meshes/${id}`, 'DELETE');
-    meshes = meshes.filter(m=>m.id!==id);
-    renderMeshTable(); renderDashboard(); updateHeader();
+    meshes = meshes.filter(x=>x.id!==id);
+    if (m?.area && m?.start_shift) await resequenceArea(m.area, 'meshes');
+    renderAll();
     showToast('Mesh deleted');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
 // ═══════════════════════════════════════════════════════
-// CAGE TABLE
+// CAGE TABLE (queue-grouped)
 // ═══════════════════════════════════════════════════════
 function renderCageTable() {
-  const tbody = document.getElementById('cage-tbody');
-  tbody.innerHTML = cages.map(c => {
-    const meshNames = (c.meshes||[]).map(m=>m.name).join(', ') || '—';
-    return `<tr>
-      <td style="font-weight:500">${c.name}</td>
-      <td><span class="area-pill area-${c.vst_area}">${c.vst_area}</span></td>
-      <td>
-        <div class="inline-edit">
-          <input type="number" step="0.5" min="0.5" value="${c.shifts_required}" style="width:55px"
-            onchange="quickUpdateCage('${c.id}','shifts_required',this.value)">
-        </div>
-      </td>
-      <td>
-        <div class="inline-edit">
-          <input type="number" step="0.5" min="0" value="${c.shifts_completed}" style="width:55px"
-            onchange="quickUpdateCage('${c.id}','shifts_completed',this.value)">
-        </div>
-      </td>
-      <td><span class="badge badge-${c.status}">${c.status.replace('_',' ')}</span></td>
-      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${meshNames}">${meshNames}</td>
-      <td>${c.start_shift || '—'}</td>
-      <td>${progressBar(c.shifts_completed, c.shifts_required)}</td>
-      <td>
-        <div style="display:flex;gap:4px">
-          <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="openCageModal('${c.id}')">✎</button>
-          <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="deleteCage('${c.id}')">✕</button>
-        </div>
-      </td>
-    </tr>`;
-  }).join('') || `<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:24px">No cages yet — click <strong>+ New Cage</strong> to add one</td></tr>`;
+  const container = document.getElementById('cage-queue-groups');
+  if (!container) return;
+  const vstColors = { VST110:'#db2777',VST120:'#7c3aed',VST130:'#1d4ed8',VST140:'#c2410c' };
+  const vstBgs    = { VST110:'#831843',VST120:'#4c1d95',VST130:'#1e3a5f',VST140:'#7c2d12' };
+
+  let html = '';
+  ['VST110','VST120','VST130','VST140'].forEach(vst => {
+    const items = cages.filter(c => c.vst_area === vst)
+                       .sort((a,b) => (a.start_shift||999999) - (b.start_shift||999999));
+    const col = vstColors[vst];
+    const bg  = vstBgs[vst];
+
+    html += `<div class="queue-group" id="cage-group-${vst}">
+      <div class="queue-group-header" style="background:${bg};color:#fff;border-color:${col}">
+        <span class="area-pill area-${vst}" style="font-size:11px">${vst}</span>
+        <span style="font-size:13px">Build Bay</span>
+        <span class="qg-count">${items.length} cage${items.length!==1?'s':''}</span>
+        <button class="btn btn-sm" style="background:rgba(255,255,255,0.2);color:#fff;border:none;margin-left:8px" onclick="openCageModal()">+ Add</button>
+      </div>
+      <div class="queue-group-body" id="cage-body-${vst}">`;
+
+    if (!items.length) {
+      html += `<div style="padding:16px;text-align:center;color:var(--muted);font-size:12px">No cages planned in ${vst} yet</div>`;
+    } else {
+      items.forEach((c, idx) => {
+        const meshNames = (c.meshes||[]).map(m=>m.name).join(', ') || '—';
+        const pct = c.shifts_required > 0 ? Math.min(100,c.shifts_completed/c.shifts_required*100) : 0;
+        html += `<div class="queue-item" id="qi-${c.id}"
+          draggable="true"
+          ondragstart="onQueueDragStart(event,'${c.id}','${vst}','cages',${idx})"
+          ondragover="onQueueDragOver(event,'${c.id}')"
+          ondrop="onQueueDrop(event,'${c.id}','${vst}','cages')"
+          ondragleave="onQueueDragLeave(event)"
+          ondragend="onQueueDragEnd(event)">
+          <div class="drag-handle" title="Drag to reorder">⠿</div>
+          <div class="queue-pos">${idx+1}</div>
+          <div class="queue-item-body">
+            <div class="qi-name">${c.name}</div>
+            <div class="qi-meta">
+              <span class="badge badge-${c.status}">${c.status.replace('_',' ')}</span>
+              <span>Req: <input class="qi-shifts-input" type="number" step="0.5" min="0.5" value="${c.shifts_required}" onchange="quickUpdateCage('${c.id}','shifts_required',this.value)" title="Shifts required"></span>
+              <span>Done: <input class="qi-shifts-input" type="number" step="0.5" min="0" value="${c.shifts_completed}" onchange="quickUpdateCage('${c.id}','shifts_completed',this.value)" title="Shifts completed"></span>
+              ${c.start_shift ? `<span style="color:var(--accent)">Shift ${c.start_shift}</span>` : '<span style="color:var(--muted)">Unscheduled</span>'}
+              <span title="Meshes" style="max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${meshNames !== '—' ? '🔩 '+meshNames : ''}</span>
+              <select class="qi-area-select" onchange="onCageVSTChange('${c.id}',this.value)" title="Move to VST">
+                ${['VST110','VST120','VST130','VST140'].map(v=>`<option value="${v}"${v===vst?' selected':''}>${v}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div style="padding:6px 8px;min-width:90px">${progressBar(c.shifts_completed,c.shifts_required)}</div>
+          <div class="qi-actions">
+            <button class="btn btn-secondary btn-sm btn-icon" title="Move up" onclick="queueMoveUp('${c.id}','${vst}','cages')" ${idx===0?'disabled':''}>↑</button>
+            <button class="btn btn-secondary btn-sm btn-icon" title="Move down" onclick="queueMoveDown('${c.id}','${vst}','cages',${items.length})" ${idx===items.length-1?'disabled':''}>↓</button>
+            <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="openCageModal('${c.id}')">✎</button>
+            <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="deleteCage('${c.id}')">✕</button>
+          </div>
+        </div>`;
+      });
+    }
+    html += `</div></div>`;
+  });
+
+  container.innerHTML = html || `<div style="padding:40px;text-align:center;color:var(--muted)">No cages yet</div>`;
 }
 
 async function quickUpdateCage(id, field, value) {
@@ -1217,19 +1507,157 @@ async function quickUpdateCage(id, field, value) {
     const updated = await api(`/api/cages/${id}`, 'PUT', { [field]: parseFloat(value) });
     const idx = cages.findIndex(c=>c.id===id);
     if (idx > -1) cages[idx] = { ...updated, meshes: cages[idx].meshes };
-    renderDashboard(); renderGanttIfActive(); updateHeader();
+    if (field === 'shifts_required') {
+      const c = cages.find(x=>x.id===id);
+      if (c?.start_shift) await resequenceArea(c.vst_area, 'cages');
+    }
+    renderAll();
     showToast('Updated ✓');
   } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function onCageVSTChange(id, newVST) {
+  try { await moveItemToArea(id, newVST, 'cages'); }
+  catch(e) { showToast(e.message,'error'); }
 }
 
 async function deleteCage(id) {
   if (!confirm('Delete this cage?')) return;
   try {
+    const c = cages.find(x=>x.id===id);
     await api(`/api/cages/${id}`, 'DELETE');
-    cages = cages.filter(c=>c.id!==id);
-    renderCageTable(); renderDashboard(); updateHeader();
+    cages = cages.filter(x=>x.id!==id);
+    if (c?.vst_area && c?.start_shift) await resequenceArea(c.vst_area, 'cages');
+    renderAll();
     showToast('Cage deleted');
   } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ── ↑↓ BUTTONS ────────────────────────────────────────
+async function queueMoveUp(id, area, type) {
+  let queue;
+  if (type==='cages') queue = cages.filter(c=>c.vst_area===area).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  else queue = meshes.filter(m=>m.area===area).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  const idx = queue.findIndex(x=>x.id===id);
+  if (idx <= 0) return;
+  await moveItemInQueue(id, idx-1, area, type);
+}
+
+async function queueMoveDown(id, area, type, total) {
+  let queue;
+  if (type==='cages') queue = cages.filter(c=>c.vst_area===area).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  else queue = meshes.filter(m=>m.area===area).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  const idx = queue.findIndex(x=>x.id===id);
+  if (idx >= queue.length-1) return;
+  await moveItemInQueue(id, idx+1, area, type);
+}
+
+// ── TABLE DRAG AND DROP ────────────────────────────────
+function onQueueDragStart(e, id, area, type, fromIdx) {
+  dragState = { id, area, type, fromIdx };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+  setTimeout(() => {
+    const el = document.getElementById('qi-' + id);
+    if (el) el.classList.add('dragging');
+  }, 0);
+}
+
+function onQueueDragOver(e, targetId) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  document.querySelectorAll('.queue-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  if (targetId !== dragState.id) {
+    const el = document.getElementById('qi-' + targetId);
+    if (el) el.classList.add('drag-over');
+  }
+}
+
+function onQueueDragLeave(e) {
+  const el = e.currentTarget;
+  if (el) el.classList.remove('drag-over');
+}
+
+async function onQueueDrop(e, targetId, targetArea, targetType) {
+  e.preventDefault();
+  document.querySelectorAll('.queue-item.drag-over').forEach(el => el.classList.remove('drag-over'));
+  const { id, area, type } = dragState;
+  if (!id || id === targetId) return;
+
+  if (area !== targetArea || type !== targetType) {
+    // Cross-area drop — move to new area
+    showToast('Use the dropdown to move between areas', 'error');
+    return;
+  }
+
+  // Same area — reorder
+  let queue;
+  if (type==='cages') queue = cages.filter(c=>c.vst_area===area).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  else queue = meshes.filter(m=>m.area===area).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  const toIdx = queue.findIndex(x=>x.id===targetId);
+  if (toIdx === -1) return;
+  try { await moveItemInQueue(id, toIdx, area, type); }
+  catch(e) { showToast(e.message,'error'); }
+}
+
+function onQueueDragEnd(e) {
+  document.querySelectorAll('.queue-item').forEach(el => el.classList.remove('dragging','drag-over'));
+  dragState = { id:null, area:null, type:null, fromIdx:null };
+}
+
+
+// ═══════════════════════════════════════════════════════
+// GANTT DRAG AND DROP
+// ═══════════════════════════════════════════════════════
+let ganttDrag = { id: null, fromArea: null, type: null };
+
+function onGanttPillDragStart(e, id, fromArea, type) {
+  ganttDrag = { id, fromArea, type };
+  e.dataTransfer.effectAllowed = 'move';
+  e.dataTransfer.setData('text/plain', id);
+  // Mark all pills of this item as dragging
+  setTimeout(() => {
+    document.querySelectorAll('.sg-pill').forEach(el => {
+      if (el.getAttribute('ondragstart') && el.getAttribute('ondragstart').includes(`'${id}'`)) {
+        el.classList.add('pill-dragging');
+      }
+    });
+  }, 0);
+}
+
+function onGanttPillDragEnd(e, id) {
+  document.querySelectorAll('.sg-pill.pill-dragging').forEach(el => el.classList.remove('pill-dragging'));
+  document.querySelectorAll('.sg-data.drop-target,.sg-data.drop-forbidden').forEach(el => {
+    el.classList.remove('drop-target','drop-forbidden');
+  });
+  ganttDrag = { id:null, fromArea:null, type:null };
+}
+
+function onGanttCellDragOver(e, dropArea, dropType) {
+  if (!ganttDrag.id) return;
+  e.preventDefault();
+  // Compatible if same type (mesh→mesh col, cage→VST col)
+  const compatible = ganttDrag.type === dropType;
+  e.dataTransfer.dropEffect = compatible ? 'move' : 'none';
+  e.currentTarget.classList.toggle('drop-target', compatible);
+  e.currentTarget.classList.toggle('drop-forbidden', !compatible);
+}
+
+function onGanttCellDragLeave(e) {
+  e.currentTarget.classList.remove('drop-target','drop-forbidden');
+}
+
+async function onGanttCellDrop(e, dropArea, dropType) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drop-target','drop-forbidden');
+  const { id, fromArea, type } = ganttDrag;
+  if (!id) return;
+  if (type !== dropType) { showToast('Cannot move mesh to VST bay or vice versa', 'error'); return; }
+  if (fromArea === dropArea) { showToast('Already in this area — drag within the queue list to reorder', 'error'); return; }
+  try {
+    await moveItemToArea(id, dropArea, type);
+    showToast(`Moved to ${dropArea} ✓`);
+  } catch(err) { showToast(err.message, 'error'); }
 }
 
 function renderGanttIfActive() {
@@ -1750,10 +2178,21 @@ function renderGantt() {
 
         const doneCls = isDone ? 'done-shade' : '';
         const label   = isStart ? item.name : '';
-        pills += `<div class="sg-pill ${spanCls} ${doneCls}" style="background:${col.color}" title="${item.name} — ${Math.round(item.shifts_completed/item.shifts_required*100)||0}% done">${label}</div>`;
+        const itype   = col.type === 'mesh' ? 'meshes' : 'cages';
+        pills += `<div class="sg-pill ${spanCls} ${doneCls}" style="background:${col.color}"
+          draggable="true"
+          title="${item.name} — ${Math.round(item.shifts_completed/item.shifts_required*100)||0}% done"
+          ondragstart="onGanttPillDragStart(event,'${item.id}','${col.area}','${itype}')"
+          ondragend="onGanttPillDragEnd(event,'${item.id}')">${label}</div>`;
       });
 
-      dataRows += `<div class="${cellCls}" style="grid-column:${gridCol};grid-row:${gridRow}">${pills}</div>`;
+      // Drop zone on each data cell
+      const dropArea = col.area;
+      const dropType = col.type === 'mesh' ? 'meshes' : 'cages';
+      dataRows += `<div class="${cellCls}" style="grid-column:${gridCol};grid-row:${gridRow}"
+        ondragover="onGanttCellDragOver(event,'${dropArea}','${dropType}')"
+        ondrop="onGanttCellDrop(event,'${dropArea}','${dropType}')"
+        ondragleave="onGanttCellDragLeave(event)">${pills}</div>`;
     });
   }
 
