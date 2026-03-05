@@ -8,27 +8,29 @@
 <link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #0d0f12;
-    --surface: #13161b;
-    --card: #1a1e26;
-    --border: #252a35;
-    --accent: #e8ff4a;
-    --accent2: #4af0d4;
-    --warn: #ff7043;
-    --ok: #69ff8c;
-    --text: #e8ecf0;
-    --muted: #5a6275;
-    --mesh-color: #4af0d4;
-    --cage-color: #e8ff4a;
-    --VST110: #ff6b9d;
-    --VST120: #c084fc;
-    --VST130: #60a5fa;
-    --VST140: #fb923c;
-    --M1: #34d399; --M2: #a3e635; --M3: #22d3ee; --M4: #818cf8; --M5: #f472b6;
+    --bg: #f0f2f5;
+    --surface: #ffffff;
+    --card: #ffffff;
+    --border: #d8dde6;
+    --border-light: #e8ecf2;
+    --accent: #1a56db;
+    --accent2: #0891b2;
+    --warn: #dc2626;
+    --ok: #16a34a;
+    --text: #111827;
+    --muted: #6b7280;
+    --muted-light: #9ca3af;
+    --mesh-color: #0891b2;
+    --cage-color: #1a56db;
+    --VST110: #db2777;
+    --VST120: #7c3aed;
+    --VST130: #1d4ed8;
+    --VST140: #c2410c;
+    --M1: #059669; --M2: #65a30d; --M3: #0284c7; --M4: #6d28d9; --M5: #be185d;
     --font-display: 'Syne', sans-serif;
     --font-mono: 'DM Mono', monospace;
     --radius: 6px;
-    --shift-w: 32px;
+    --shift-w: 46px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
@@ -64,7 +66,7 @@
   }
   .logo-badge {
     background: var(--accent);
-    color: #0d0f12;
+    color: #ffffff;
     font-size: 10px;
     font-weight: 700;
     padding: 2px 6px;
@@ -109,7 +111,7 @@
     white-space: nowrap;
   }
   .tab:hover { color: var(--text); }
-  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
 
   /* ── LAYOUT ── */
   .main { padding: 20px 24px; }
@@ -130,10 +132,10 @@
     align-items: center;
     gap: 6px;
   }
-  .btn-primary { background: var(--accent); color: #0d0f12; }
+  .btn-primary { background: var(--accent); color: #ffffff; }
   .btn-primary:hover { background: #d4e840; }
-  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
-  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-secondary { background: #ffffff; color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); background: #eff6ff; }
   .btn-danger { background: transparent; color: var(--warn); border: 1px solid var(--warn); }
   .btn-danger:hover { background: var(--warn); color: white; }
   .btn-sm { padding: 4px 10px; font-size: 11px; }
@@ -145,6 +147,7 @@
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 16px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
   .card-title {
     font-family: var(--font-display);
@@ -164,7 +167,7 @@
   .form-group input,
   .form-group select,
   .form-group textarea {
-    background: var(--surface);
+    background: #ffffff;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     color: var(--text);
@@ -175,8 +178,8 @@
     transition: border-color 0.15s;
   }
   .form-group input:focus,
-  .form-group select:focus { border-color: var(--accent); }
-  .form-group select option { background: var(--surface); }
+  .form-group select:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .form-group select option { background: #ffffff; }
 
   /* ── TABLE ── */
   .data-table { width: 100%; border-collapse: collapse; }
@@ -187,7 +190,8 @@
     text-transform: uppercase;
     letter-spacing: 0.8px;
     color: var(--muted);
-    border-bottom: 1px solid var(--border);
+    border-bottom: 2px solid var(--border);
+    background: #f8fafc;
     white-space: nowrap;
   }
   .data-table td {
@@ -195,7 +199,7 @@
     border-bottom: 1px solid rgba(255,255,255,0.04);
     vertical-align: middle;
   }
-  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+  .data-table tr:hover td { background: #f8fafc; }
 
   /* ── BADGES ── */
   .badge {
@@ -207,12 +211,12 @@
     font-weight: 500;
     letter-spacing: 0.5px;
   }
-  .badge-planned { background: rgba(90,98,117,0.3); color: var(--muted); }
-  .badge-in_progress { background: rgba(232,255,74,0.15); color: var(--accent); border: 1px solid rgba(232,255,74,0.3); }
-  .badge-stored { background: rgba(74,240,212,0.15); color: var(--accent2); }
-  .badge-married { background: rgba(129,140,248,0.2); color: #818cf8; }
-  .badge-used { background: rgba(105,255,140,0.15); color: var(--ok); }
-  .badge-complete { background: rgba(105,255,140,0.2); color: var(--ok); border: 1px solid rgba(105,255,140,0.3); }
+  .badge-planned { background: #f3f4f6; color: var(--muted); border: 1px solid var(--border); }
+  .badge-in_progress { background: #dbeafe; color: var(--accent); border: 1px solid #bfdbfe; }
+  .badge-stored { background: #cffafe; color: var(--accent2); }
+  .badge-married { background: #ede9fe; color: #7c3aed; }
+  .badge-used { background: #dcfce7; color: var(--ok); }
+  .badge-complete { background: #dcfce7; color: var(--ok); border: 1px solid #bbf7d0; }
 
   /* ── AREA PILLS ── */
   .area-pill {
@@ -223,20 +227,20 @@
     font-size: 11px;
     font-weight: 500;
   }
-  .area-M1 { background: rgba(52,211,153,0.2); color: var(--M1); }
-  .area-M2 { background: rgba(163,230,53,0.2); color: var(--M2); }
-  .area-M3 { background: rgba(34,211,238,0.2); color: var(--M3); }
-  .area-M4 { background: rgba(129,140,248,0.2); color: var(--M4); }
-  .area-M5 { background: rgba(244,114,182,0.2); color: var(--M5); }
-  .area-VST110 { background: rgba(255,107,157,0.2); color: var(--VST110); }
-  .area-VST120 { background: rgba(192,132,252,0.2); color: var(--VST120); }
-  .area-VST130 { background: rgba(96,165,250,0.2); color: var(--VST130); }
-  .area-VST140 { background: rgba(251,146,60,0.2); color: var(--VST140); }
+  .area-M1 { background: #d1fae5; color: var(--M1); }
+  .area-M2 { background: #ecfccb; color: var(--M2); }
+  .area-M3 { background: #e0f2fe; color: var(--M3); }
+  .area-M4 { background: #ede9fe; color: var(--M4); }
+  .area-M5 { background: #fce7f3; color: var(--M5); }
+  .area-VST110 { background: #fce7f3; color: var(--VST110); }
+  .area-VST120 { background: #ede9fe; color: var(--VST120); }
+  .area-VST130 { background: #dbeafe; color: var(--VST130); }
+  .area-VST140 { background: #ffedd5; color: var(--VST140); }
 
   /* ── PROGRESS BAR ── */
   .progress-bar {
-    height: 4px;
-    background: var(--border);
+    height: 5px;
+    background: #e5e7eb;
     border-radius: 2px;
     overflow: hidden;
     min-width: 80px;
@@ -256,11 +260,12 @@
     background: var(--card);
     border: 1px solid var(--border);
     border-radius: var(--radius);
+    box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   }
   .gantt-wrap { min-width: max-content; }
   .gantt-header {
     display: flex;
-    background: var(--surface);
+    background: #f8fafc;
     border-bottom: 1px solid var(--border);
     position: sticky;
     top: 0;
@@ -279,16 +284,16 @@
     padding: 2px 0;
     border-right: 1px solid rgba(255,255,255,0.03);
   }
-  .gantt-shift-cell.shift-1 { color: #fbbf24; }
+  .gantt-shift-cell.shift-1 { color: #d97706; font-weight: 600; }
   .gantt-shift-cell.shift-2 { color: var(--muted); }
-  .gantt-shift-cell.shift-3 { color: #60a5fa; }
+  .gantt-shift-cell.shift-3 { color: #2563eb; font-weight: 600; }
   .gantt-row {
     display: flex;
     align-items: center;
     border-bottom: 1px solid rgba(255,255,255,0.03);
     min-height: 34px;
   }
-  .gantt-row:hover { background: rgba(255,255,255,0.015); }
+  .gantt-row:hover { background: #f8fafc; }
   .gantt-row-label {
     width: 220px;
     min-width: 220px;
@@ -307,7 +312,7 @@
     border-right: 1px solid rgba(255,255,255,0.02);
     position: relative;
   }
-  .gantt-cell.weekend { background: rgba(255,255,255,0.015); }
+  .gantt-cell.weekend { background: rgba(0,0,0,0.025); }
   .gantt-bar {
     position: absolute;
     top: 5px;
@@ -338,7 +343,7 @@
   .gantt-section-header {
     display: flex;
     align-items: center;
-    background: rgba(255,255,255,0.02);
+    background: #f8fafc;
     border-bottom: 1px solid var(--border);
     min-height: 26px;
   }
@@ -391,7 +396,7 @@
   .vst-name { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 6px; }
   .vst-status { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
   .vst-cage-name { font-size: 13px; color: var(--text); }
-  .vst-empty { font-size: 12px; color: var(--muted); font-style: italic; }
+  .vst-empty { font-size: 12px; color: var(--muted-light); font-style: italic; }
 
   /* ── STORAGE MAP ── */
   .storage-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
@@ -405,16 +410,16 @@
     transition: border-color 0.15s;
   }
   .storage-cell:hover { border-color: var(--accent2); }
-  .storage-cell.occupied { border-color: rgba(74,240,212,0.3); background: rgba(74,240,212,0.05); }
+  .storage-cell.occupied { border-color: #a5f3fc; background: #ecfeff; }
   .storage-label { font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
   .storage-items { display: flex; flex-direction: column; gap: 3px; }
-  .storage-item { font-size: 10px; color: var(--accent2); }
+  .storage-item { font-size: 10px; color: var(--accent2); font-weight: 500; }
 
   /* ── MODAL ── */
   .modal-overlay {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.7);
+    background: rgba(17,24,39,0.5);
     z-index: 200;
     display: flex;
     align-items: center;
@@ -426,7 +431,8 @@
   }
   .modal-overlay.open { opacity: 1; pointer-events: all; }
   .modal {
-    background: var(--card);
+    background: #ffffff;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.15);
     border: 1px solid var(--border);
     border-radius: 10px;
     padding: 24px;
@@ -454,7 +460,7 @@
     position: fixed;
     bottom: 24px;
     right: 24px;
-    background: var(--card);
+    background: #1f2937;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 10px 16px;
@@ -467,15 +473,16 @@
     max-width: 300px;
   }
   #toast.show { opacity: 1; transform: translateY(0); }
-  #toast.success { border-color: var(--ok); color: var(--ok); }
-  #toast.error { border-color: var(--warn); color: var(--warn); }
+  #toast { color: #f9fafb; border-color: #374151; }
+  #toast.success { border-color: #16a34a; }
+  #toast.error { border-color: #dc2626; }
 
   /* ── SHIFT COUNTER ── */
   .shift-input-wrap {
     display: flex;
     align-items: center;
     gap: 4px;
-    background: var(--surface);
+    background: #f8fafc;
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 3px;
@@ -498,7 +505,7 @@
   }
   .inline-edit input {
     width: 60px;
-    background: var(--surface);
+    background: #f8fafc;
     border: 1px solid var(--accent);
     border-radius: 3px;
     color: var(--text);
@@ -514,6 +521,7 @@
     flex: 1;
     min-width: 100px;
     background: var(--surface);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.06);
     border: 1px solid var(--border);
     border-radius: var(--radius);
     padding: 12px 14px;
@@ -524,7 +532,7 @@
 
   /* config panel */
   .config-section { margin-bottom: 24px; }
-  .config-section h3 { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--accent); }
+  .config-section h3 { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--accent); border-bottom: 2px solid #dbeafe; padding-bottom: 6px; }
 
   /* checkbox multi-select for meshes */
   .mesh-picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; padding: 4px; }
@@ -532,7 +540,7 @@
     display: flex;
     align-items: center;
     gap: 5px;
-    background: var(--surface);
+    background: #f8fafc;
     border: 1px solid var(--border);
     border-radius: 4px;
     padding: 4px 8px;
@@ -540,7 +548,7 @@
     font-size: 11px;
     transition: border-color 0.15s;
   }
-  .mesh-check-item.selected { border-color: var(--accent); background: rgba(232,255,74,0.07); color: var(--accent); }
+  .mesh-check-item.selected { border-color: var(--accent); background: #eff6ff; color: var(--accent); }
   .mesh-check-item input { display: none; }
 
   /* Responsive */
@@ -1281,126 +1289,147 @@ function renderStorage() {
 }
 
 // ═══════════════════════════════════════════════════════
-// GANTT
+// GANTT  (vertical — columns = items, rows = shifts)
 // ═══════════════════════════════════════════════════════
+const SHIFT_NAMES = ['AM', 'Noon', 'PM'];
+const SHIFT_CLASSES = ['tl-am', 'tl-noon', 'tl-pm'];
+
+function cssVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
 function renderGantt() {
   const spd = parseInt(programme.shifts_per_day) || 3;
   const weeks = parseInt(programme.weeks) || 4;
-  const totalShifts = weeks * 7 * spd;
+  const totalDays = weeks * 7;
+  const totalShifts = totalDays * spd;
   const startDate = new Date(programme.plan_start_date || new Date());
   const inner = document.getElementById('gantt-inner');
 
-  // Build header
-  let dayLabels = '';
-  let shiftLabels = '';
+  // Collect all items that have a start_shift
+  const allMeshes = meshes.filter(m => m.start_shift != null);
+  const allCages  = cages.filter(c => c.start_shift != null);
+
+  // Build groups: meshes by area, then cages by VST
+  const meshAreas = ['M1','M2','M3','M4','M5'];
+  const vstAreas  = ['VST110','VST120','VST130','VST140'];
+
+  // All columns in order: section headers interleaved
+  // Each column = { type:'item'|'section', item?, label?, color? }
+  const columns = [];
+
+  meshAreas.forEach(area => {
+    const ms = allMeshes.filter(m => m.area === area);
+    if (!ms.length) return;
+    columns.push({ type:'section', label: area + ' Meshes', color: cssVar('--' + area) });
+    ms.forEach(m => columns.push({ type:'item', item: m, itemType:'mesh', color: cssVar('--' + m.area) }));
+  });
+
+  vstAreas.forEach(vst => {
+    const cs = allCages.filter(c => c.vst_area === vst);
+    if (!cs.length) return;
+    columns.push({ type:'section', label: vst, color: cssVar('--' + vst) });
+    cs.forEach(c => columns.push({ type:'item', item: c, itemType:'cage', color: cssVar('--' + c.vst_area) }));
+  });
+
+  if (!columns.length) {
+    inner.innerHTML = `<div style="padding:40px;text-align:center;color:var(--muted);font-size:13px">No items with start shifts yet.<br>Add meshes or cages with a <strong>Start Shift #</strong> to see them here.</div>`;
+    return;
+  }
+
+  // ── Build column header row ──
+  let colHeaders = `<div class="gantt-corner"></div>`;
+  columns.forEach(col => {
+    if (col.type === 'section') {
+      colHeaders += `<div class="gantt-col-header" style="background:#f1f5f9;border-bottom:3px solid ${col.color}">
+        <div class="col-name" style="color:${col.color};font-size:10px;letter-spacing:0.8px;text-transform:uppercase">${col.label}</div>
+      </div>`;
+    } else {
+      const { item, itemType, color } = col;
+      const pct = item.shifts_required > 0 ? Math.round(item.shifts_completed / item.shifts_required * 100) : 0;
+      colHeaders += `<div class="gantt-col-header" style="border-bottom:3px solid ${color}">
+        <div class="col-name" title="${item.name}">${item.name}</div>
+        <div class="col-sub">
+          <span class="badge badge-${item.status}" style="font-size:9px">${item.status.replace('_',' ')}</span>
+          &nbsp;${pct}%
+        </div>
+      </div>`;
+    }
+  });
+
+  // ── Build time rows ──
+  let timeRows = '';
   for (let s = 0; s < totalShifts; s++) {
     const dayIdx = Math.floor(s / spd);
-    const shiftInDay = (s % spd) + 1;
+    const shiftInDay = s % spd; // 0-based
     const date = new Date(startDate);
     date.setDate(startDate.getDate() + dayIdx);
     const dow = date.getDay();
     const isWeekend = dow === 0 || dow === 6;
-    // day label only on first shift of day
-    if (shiftInDay === 1) {
-      const dStr = date.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
-      dayLabels += `<div style="position:absolute;left:${s*(parseInt(getComputedStyle(document.documentElement).getPropertyValue('--shift-w'))||32)}px;width:${spd*32}px;font-size:9px;color:${isWeekend?'var(--warn)':'var(--muted)'};text-align:center;white-space:nowrap;overflow:hidden">${dStr}</div>`;
-    }
-    shiftLabels += `<div class="gantt-shift-cell shift-${shiftInDay}" style="background:${isWeekend?'rgba(255,255,255,0.015)':''}">S${shiftInDay}</div>`;
+    const isFirstShiftOfDay = shiftInDay === 0;
+    const shiftNum = s + 1; // 1-based absolute shift number
+
+    const shiftLabel = spd === 3 ? SHIFT_NAMES[shiftInDay] : (spd === 2 ? ['AM','PM'][shiftInDay] : 'Shift');
+    const shiftClass = spd === 3 ? SHIFT_CLASSES[shiftInDay] : (shiftInDay === 0 ? 'tl-am' : 'tl-pm');
+
+    const dateStr = isFirstShiftOfDay
+      ? date.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+      : '';
+
+    const rowClasses = ['gantt-time-row',
+      isFirstShiftOfDay ? 'day-start' : '',
+      isWeekend ? 'weekend-row' : ''
+    ].filter(Boolean).join(' ');
+
+    const labelClasses = ['gantt-time-label', isWeekend ? 'weekend-label' : ''].filter(Boolean).join(' ');
+
+    let rowCells = `<div class="${labelClasses}">
+      ${isFirstShiftOfDay ? `<div class="tl-date">${dateStr}</div>` : ''}
+      <div class="tl-shift ${shiftClass}">${shiftLabel}</div>
+    </div>`;
+
+    columns.forEach(col => {
+      if (col.type === 'section') {
+        rowCells += `<div class="gantt-vcell${isWeekend?' weekend-cell':''}" style="background:${isWeekend?'rgba(0,0,0,0.02)':'rgba(0,0,0,0.01)'}"></div>`;
+        return;
+      }
+      const { item, color } = col;
+      const itemStart = (item.start_shift || 1) - 1; // 0-based
+      const itemEnd   = itemStart + Math.max(1, item.shifts_required); // exclusive
+      const doneEnd   = itemStart + item.shifts_completed;
+
+      const inBar    = s >= itemStart && s < itemEnd;
+      const isDone   = s < doneEnd;
+      const isStart  = s === itemStart;
+      const isEndSh  = s === Math.ceil(itemEnd) - 1;
+
+      let barHTML = '';
+      if (inBar) {
+        let posClass = 'bar-mid';
+        if (isStart && isEndSh) posClass = 'bar-solo';
+        else if (isStart)       posClass = 'bar-start';
+        else if (isEndSh)       posClass = 'bar-end';
+
+        const label = isStart ? item.name : '';
+        const doneStyle = isDone ? `background:${color};opacity:0.45;` : `background:${color};opacity:0.9;`;
+
+        barHTML = `<div class="gantt-vbar ${posClass}" style="${doneStyle}" title="${item.name}">${label}</div>`;
+      }
+
+      rowCells += `<div class="gantt-vcell${isWeekend?' weekend-cell':''}">${barHTML}</div>`;
+    });
+
+    timeRows += `<div class="${rowClasses}">${rowCells}</div>`;
   }
-
-  const SW = 32; // shift width px
-  const totalW = totalShifts * SW;
-
-  let rows = '';
-
-  // Mesh rows grouped by area
-  const meshAreas = ['M1','M2','M3','M4','M5'];
-  meshAreas.forEach(area => {
-    const areaMs = meshes.filter(m => m.area === area);
-    if (!areaMs.length) return;
-    rows += `<div class="gantt-section-header">
-      <div class="gantt-section-title" style="color:var(--${area})">${area} Meshes</div>
-      <div style="flex:1"></div>
-    </div>`;
-    areaMs.forEach(m => {
-      const start = (m.start_shift || 1) - 1;
-      const dur = Math.max(0.5, m.shifts_required) * SW;
-      const donePct = m.shifts_required > 0 ? Math.min(1, m.shifts_completed / m.shifts_required) : 0;
-      const color = getComputedStyle(document.documentElement).getPropertyValue(`--${m.area}`).trim() || '#4af0d4';
-      rows += `<div class="gantt-row">
-        <div class="gantt-row-label">
-          <div class="row-name" title="${m.name}">${m.name}</div>
-          <div class="row-sub"><span class="badge badge-${m.status}" style="font-size:9px">${m.status.replace('_',' ')}</span></div>
-        </div>
-        <div class="gantt-cells" style="width:${totalW}px;position:relative;">
-          ${ganttBarHTML(start, m.shifts_required, donePct, m.name, color, 'mesh')}
-          ${ganttGridCells(totalShifts, spd)}
-        </div>
-      </div>`;
-    });
-  });
-
-  // Cage rows grouped by VST
-  const vstAreas = ['VST110','VST120','VST130','VST140'];
-  vstAreas.forEach(vst => {
-    const vstCs = cages.filter(c => c.vst_area === vst);
-    if (!vstCs.length) return;
-    rows += `<div class="gantt-section-header">
-      <div class="gantt-section-title" style="color:var(--${vst})">${vst}</div>
-      <div style="flex:1"></div>
-    </div>`;
-    vstCs.forEach(c => {
-      const start = (c.start_shift || 1) - 1;
-      const donePct = c.shifts_required > 0 ? Math.min(1, c.shifts_completed / c.shifts_required) : 0;
-      const color = getComputedStyle(document.documentElement).getPropertyValue(`--${vst}`).trim() || '#e8ff4a';
-      rows += `<div class="gantt-row">
-        <div class="gantt-row-label">
-          <div class="row-name" title="${c.name}">${c.name}</div>
-          <div class="row-sub"><span class="badge badge-${c.status}" style="font-size:9px">${c.status.replace('_',' ')}</span></div>
-        </div>
-        <div class="gantt-cells" style="width:${totalW}px;position:relative;">
-          ${ganttBarHTML(start, c.shifts_required, donePct, c.name, color, 'cage')}
-          ${ganttGridCells(totalShifts, spd)}
-        </div>
-      </div>`;
-    });
-  });
-
-  if (!rows) rows = `<div style="padding:40px;text-align:center;color:var(--muted)">No meshes or cages scheduled yet. Add items with start shift numbers to see them here.</div>`;
 
   inner.innerHTML = `
-    <div class="gantt-header">
-      <div class="gantt-label-col">Item</div>
-      <div style="flex:1;position:relative;height:42px;overflow:hidden">
-        <div style="position:absolute;top:0;left:0;right:0;height:20px;display:flex;">${dayLabels}</div>
-        <div style="position:absolute;top:20px;left:0;display:flex;">${shiftLabels}</div>
-      </div>
-    </div>
-    ${rows}`;
+    <div class="gantt-col-headers">${colHeaders}</div>
+    ${timeRows}`;
 }
 
-function ganttBarHTML(startShift, shiftsRequired, donePct, label, color, type) {
-  const SW = 32;
-  const left = startShift * SW;
-  const width = Math.max(SW * 0.5, shiftsRequired * SW);
-  const doneW = width * donePct;
-  const alpha = type === 'mesh' ? '0.85' : '0.9';
-  return `<div class="gantt-bar" style="left:${left}px;width:${width}px;background:${color};opacity:${alpha};color:#0d0f12" title="${label} — ${Math.round(donePct*100)}% done">
-    <div class="bar-done" style="width:${doneW}px;background:rgba(0,0,0,0.35)"></div>
-    <span class="bar-label" style="font-size:10px;font-weight:600;overflow:hidden">${label}</span>
-  </div>`;
-}
-
-function ganttGridCells(totalShifts, spd) {
-  let html = '';
-  for (let s = 0; s < totalShifts; s++) {
-    const dayIdx = Math.floor(s / spd);
-    const weekDay = (dayIdx % 7);
-    const isWeekend = weekDay === 5 || weekDay === 6;
-    html += `<div class="gantt-cell${isWeekend?' weekend':''}" style="left:${s*32}px;position:absolute;width:32px;height:34px;top:0"></div>`;
-  }
-  return html;
-}
+// Keep stubs so nothing else breaks
+function ganttBarHTML() { return ''; }
+function ganttGridCells() { return ''; }
 
 // ═══════════════════════════════════════════════════════
 // SETTINGS
@@ -1415,13 +1444,27 @@ function openSettings() {
 function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
 
 async function testConnection() {
-  const url = document.getElementById('worker-url').value.trim();
+  const url = document.getElementById('worker-url').value.trim().replace(/\/$/, '');
   const status = document.getElementById('conn-status');
+  status.style.color = 'var(--muted)';
+  status.textContent = 'Testing…';
   try {
-    const res = await fetch(url + '/api/programme');
-    if (res.ok) { status.style.color = 'var(--ok)'; status.textContent = '✓ Connected'; }
-    else { status.style.color = 'var(--warn)'; status.textContent = '✗ Error ' + res.status; }
-  } catch(e) { status.style.color = 'var(--warn)'; status.textContent = '✗ ' + e.message; }
+    const res = await fetch(url + '/health');
+    const body = await res.json().catch(() => ({}));
+    if (res.ok && body.ok) {
+      status.style.color = 'var(--ok)';
+      status.textContent = '✓ Connected — ' + (body.service || 'Worker OK');
+    } else if (res.ok) {
+      status.style.color = 'var(--ok)';
+      status.textContent = '✓ Worker reachable (HTTP ' + res.status + ')';
+    } else {
+      status.style.color = 'var(--warn)';
+      status.textContent = '✗ HTTP ' + res.status + (body.error ? ': ' + body.error : '');
+    }
+  } catch(e) {
+    status.style.color = 'var(--warn)';
+    status.textContent = '✗ ' + (e.message.includes('fetch') ? 'Cannot reach worker — check URL or CORS' : e.message);
+  }
 }
 
 async function saveProgramme() {
