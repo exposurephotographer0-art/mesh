@@ -894,11 +894,12 @@
 
 <!-- ── MESH MODAL ── -->
 <div id="mesh-modal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal" style="width:580px">
     <div class="modal-title">
       <span id="mesh-modal-title">New Mesh</span>
       <button class="btn btn-secondary btn-sm btn-icon" onclick="closeMeshModal()">✕</button>
     </div>
+
     <div class="form-row">
       <div class="form-group" style="flex:2">
         <label>Mesh Name / ID</label>
@@ -906,28 +907,12 @@
       </div>
       <div class="form-group">
         <label>Production Area</label>
-        <select id="m-area">
+        <select id="m-area" onchange="onMeshAreaSelectChange()">
           <option value="M1">M1</option><option value="M2">M2</option>
           <option value="M3">M3</option><option value="M4">M4</option>
           <option value="M5">M5</option>
         </select>
       </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Shifts Required</label>
-        <input id="m-shifts" type="number" step="0.5" min="0.5" value="1">
-      </div>
-      <div class="form-group">
-        <label>Shifts Completed</label>
-        <input id="m-shifts-done" type="number" step="0.5" min="0" value="0">
-      </div>
-      <div class="form-group">
-        <label>Start Shift #</label>
-        <input id="m-start" type="number" min="1" placeholder="e.g. 1">
-      </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>Status</label>
         <select id="m-status">
@@ -938,6 +923,30 @@
           <option value="used">Used in Cage</option>
         </select>
       </div>
+    </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Shifts Required</label>
+        <input id="m-shifts" type="number" step="0.5" min="0.5" value="1" onchange="refreshMeshQueuePreview()">
+      </div>
+      <div class="form-group">
+        <label>Shifts Completed</label>
+        <input id="m-shifts-done" type="number" step="0.5" min="0" value="0">
+      </div>
+    </div>
+
+    <!-- Queue position picker — shown for new meshes, hidden for edits -->
+    <div id="mesh-queue-section" style="margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:8px">
+        <label>Position in Area Queue</label>
+      </div>
+      <div id="mesh-queue-preview" class="queue-preview"></div>
+      <input type="hidden" id="m-insert-after-id" value="">
+      <input type="hidden" id="m-start" value="">
+    </div>
+
+    <div class="form-row">
       <div class="form-group">
         <label>Storage Area (if stored)</label>
         <select id="m-storage">
@@ -1608,6 +1617,9 @@ function onQueueDragEnd(e) {
 
 // ═══════════════════════════════════════════════════════
 // GANTT DRAG AND DROP
+// Supports:
+//   • Vertical drag (same column) → reorder within queue
+//   • Horizontal drag (different column, same type) → move to new area/VST
 // ═══════════════════════════════════════════════════════
 let ganttDrag = { id: null, fromArea: null, type: null };
 
@@ -1615,7 +1627,6 @@ function onGanttPillDragStart(e, id, fromArea, type) {
   ganttDrag = { id, fromArea, type };
   e.dataTransfer.effectAllowed = 'move';
   e.dataTransfer.setData('text/plain', id);
-  // Mark all pills of this item as dragging
   setTimeout(() => {
     document.querySelectorAll('.sg-pill').forEach(el => {
       if (el.getAttribute('ondragstart') && el.getAttribute('ondragstart').includes(`'${id}'`)) {
@@ -1636,7 +1647,6 @@ function onGanttPillDragEnd(e, id) {
 function onGanttCellDragOver(e, dropArea, dropType) {
   if (!ganttDrag.id) return;
   e.preventDefault();
-  // Compatible if same type (mesh→mesh col, cage→VST col)
   const compatible = ganttDrag.type === dropType;
   e.dataTransfer.dropEffect = compatible ? 'move' : 'none';
   e.currentTarget.classList.toggle('drop-target', compatible);
@@ -1647,16 +1657,101 @@ function onGanttCellDragLeave(e) {
   e.currentTarget.classList.remove('drop-target','drop-forbidden');
 }
 
-async function onGanttCellDrop(e, dropArea, dropType) {
+async function onGanttCellDrop(e, dropArea, dropType, dropShiftIdx) {
   e.preventDefault();
   e.currentTarget.classList.remove('drop-target','drop-forbidden');
   const { id, fromArea, type } = ganttDrag;
   if (!id) return;
-  if (type !== dropType) { showToast('Cannot move mesh to VST bay or vice versa', 'error'); return; }
-  if (fromArea === dropArea) { showToast('Already in this area — drag within the queue list to reorder', 'error'); return; }
+
+  // Wrong type — block
+  if (type !== dropType) {
+    showToast('Cannot mix meshes and cage bays', 'error');
+    return;
+  }
+
+  const isCage = type === 'cages';
+
+  // ── CROSS-AREA: move to a different column ──────────────────────
+  if (fromArea !== dropArea) {
+    try {
+      await moveItemToArea(id, dropArea, type);
+      // After appending to end of new area, now re-insert at the right
+      // position based on where in the column they dropped
+      const dropShiftNum = dropShiftIdx + 1; // 1-based
+      let queue;
+      if (isCage) {
+        queue = cages.filter(c => c.vst_area === dropArea && c.start_shift != null)
+                     .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+      } else {
+        queue = meshes.filter(m => m.area === dropArea && m.start_shift != null)
+                      .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+      }
+      // Find position: item whose range covers dropShiftNum, or insert before next item
+      const draggedItem = isCage ? cages.find(c=>c.id===id) : meshes.find(m=>m.id===id);
+      const otherItems  = queue.filter(x => x.id !== id);
+      // Find which position in otherItems the dropShiftNum falls before
+      let insertIdx = otherItems.length; // default: end
+      for (let i = 0; i < otherItems.length; i++) {
+        if ((otherItems[i].start_shift || 1) > dropShiftNum) {
+          insertIdx = i;
+          break;
+        }
+      }
+      // Rebuild queue with dragged item at insertIdx
+      const newOrder = [...otherItems];
+      newOrder.splice(insertIdx, 0, draggedItem);
+      const updates = computeSequence(newOrder, 1);
+      await saveSequence(updates, type);
+      renderAll();
+      showToast(`Moved to ${dropArea} ✓`);
+    } catch(err) { showToast(err.message, 'error'); }
+    return;
+  }
+
+  // ── SAME AREA: vertical reorder ─────────────────────────────────
+  const dropShiftNum = dropShiftIdx + 1; // 1-based
+
+  let queue;
+  if (isCage) {
+    queue = cages.filter(c => c.vst_area === fromArea && c.start_shift != null)
+                 .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+  } else {
+    queue = meshes.filter(m => m.area === fromArea && m.start_shift != null)
+                  .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+  }
+
+  const fromIdx = queue.findIndex(x => x.id === id);
+  if (fromIdx === -1) return;
+
+  // Which item does the drop target shift belong to?
+  const targetItem = queue.find(x => {
+    const s0 = x.start_shift - 1;
+    const s1 = s0 + Math.ceil(x.shifts_required);
+    return dropShiftIdx >= s0 && dropShiftIdx < s1;
+  });
+
+  let toIdx;
+  if (!targetItem || targetItem.id === id) {
+    // Dropped on empty space or own bar — find nearest item below
+    toIdx = queue.findIndex(x => (x.start_shift - 1) > dropShiftIdx);
+    if (toIdx === -1) toIdx = queue.length - 1;
+  } else {
+    toIdx = queue.findIndex(x => x.id === targetItem.id);
+    // If dropped on the top half of target, insert before; bottom half, insert after
+    // (simple heuristic: insert before target)
+    if (fromIdx > toIdx) {
+      // moving up — insert before target
+    } else {
+      // moving down — insert after target
+      toIdx = Math.min(toIdx, queue.length - 1);
+    }
+  }
+
+  if (fromIdx === toIdx) return;
+
   try {
-    await moveItemToArea(id, dropArea, type);
-    showToast(`Moved to ${dropArea} ✓`);
+    await moveItemInQueue(id, toIdx, fromArea, type);
+    showToast('Reordered ✓');
   } catch(err) { showToast(err.message, 'error'); }
 }
 
@@ -1665,11 +1760,113 @@ function renderGanttIfActive() {
 }
 
 // ═══════════════════════════════════════════════════════
-// MODAL — MESH
+// MODAL — MESH  (queue-aware, mirrors cage modal)
 // ═══════════════════════════════════════════════════════
+
+function meshAreaQueue(area, excludeId = null) {
+  return meshes
+    .filter(m => m.area === area && m.id !== excludeId && m.start_shift != null)
+    .sort((a, b) => (a.start_shift || 999999) - (b.start_shift || 999999));
+}
+
+function refreshMeshQueuePreview() {
+  if (editMeshId) return;
+  const area = document.getElementById('m-area').value;
+  const newShifts = parseFloat(document.getElementById('m-shifts').value) || 1;
+  const queue = meshAreaQueue(area);
+  const currentInsertAfter = document.getElementById('m-insert-after-id').value;
+  const container = document.getElementById('mesh-queue-preview');
+
+  function shiftToLabel(s) {
+    if (!s) return '—';
+    const spd = parseInt(programme.shifts_per_day) || 3;
+    const names = spd === 3 ? ['AM','Noon','PM'] : spd === 2 ? ['AM','PM'] : ['S'];
+    const dayIdx = Math.floor((s-1) / spd);
+    const shiftInDay = (s-1) % spd;
+    const date = new Date(programme.plan_start_date || new Date());
+    date.setDate(date.getDate() + dayIdx);
+    return `${date.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'})} ${names[shiftInDay]||'S'+(shiftInDay+1)}`;
+  }
+
+  function buildSimulated(insertAfterId) {
+    const newStart = calcInsertStart(queue, insertAfterId, newShifts);
+    let result = [];
+    let insertIdx = (insertAfterId === null || insertAfterId === '')
+      ? 0 : (queue.findIndex(m => m.id === insertAfterId) + 1);
+    for (let i = 0; i < insertIdx; i++) result.push({ ...queue[i], simStart: queue[i].start_shift });
+    result.push({ id:'__new__', name: document.getElementById('m-name').value||'(new mesh)', shifts_required: newShifts, simStart: newStart, isNew: true });
+    let cursor = newStart + Math.ceil(newShifts);
+    for (let i = insertIdx; i < queue.length; i++) {
+      result.push({ ...queue[i], simStart: cursor });
+      cursor += Math.ceil(queue[i].shifts_required);
+    }
+    return result;
+  }
+
+  let defaultInsertAfter = currentInsertAfter;
+  if (defaultInsertAfter === '' && queue.length > 0) defaultInsertAfter = queue[queue.length-1].id;
+
+  const sim = buildSimulated(defaultInsertAfter);
+  let html = '';
+
+  if (queue.length === 0) {
+    html = `<div class="queue-empty">No meshes scheduled in ${area} yet — this will be the first.</div>`;
+    html += `<div class="queue-slot insert-slot selected" style="margin-top:6px">✦ Place as first mesh in ${area}<span class="queue-new-badge">NEW</span></div>`;
+    document.getElementById('m-insert-after-id').value = '';
+    document.getElementById('m-start').value = '1';
+    container.innerHTML = html;
+    return;
+  }
+
+  html += `<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px">Click a position to place the new mesh. Programme adjusts automatically.</div>`;
+  const atStart = (defaultInsertAfter === null || defaultInsertAfter === '');
+  html += `<div class="queue-slot insert-slot ${atStart?'selected':''}" onclick="selectMeshInsertPosition(null)">↑ Insert at start of ${area} queue</div>`;
+
+  queue.forEach((m, i) => {
+    const isAfterSelected = defaultInsertAfter === m.id;
+    const simItem = sim.find(s => s.id === m.id);
+    const shifted = simItem && simItem.simStart !== m.start_shift;
+    const pct = m.shifts_required > 0 ? Math.round(m.shifts_completed/m.shifts_required*100) : 0;
+    html += `<div class="queue-slot existing-cage" style="pointer-events:none">
+      <span class="q-icon">🔩</span>
+      <div class="q-info">
+        <div class="q-name">${m.name}</div>
+        <div class="q-detail">
+          ${shifted
+            ? `<span style="text-decoration:line-through;color:#aaa">${shiftToLabel(m.start_shift)}</span> → <span style="color:var(--warn);font-weight:600">${shiftToLabel(simItem?.simStart)}</span>`
+            : `<span>${shiftToLabel(m.start_shift)}</span>`}
+          &nbsp;·&nbsp; ${m.shifts_required} shifts &nbsp;·&nbsp; ${pct}% done
+          &nbsp;<span class="badge badge-${m.status}" style="font-size:9px">${m.status.replace('_',' ')}</span>
+        </div>
+      </div>
+    </div>`;
+    html += `<div class="queue-slot insert-slot ${isAfterSelected?'selected':''}" onclick="selectMeshInsertPosition('${m.id}')">↓ Insert after ${m.name}</div>`;
+  });
+
+  document.getElementById('m-insert-after-id').value = defaultInsertAfter || '';
+  document.getElementById('m-start').value = calcInsertStart(queue, defaultInsertAfter, newShifts);
+  container.innerHTML = html;
+}
+
+function selectMeshInsertPosition(insertAfterId) {
+  const area = document.getElementById('m-area').value;
+  const newShifts = parseFloat(document.getElementById('m-shifts').value) || 1;
+  const queue = meshAreaQueue(area);
+  document.getElementById('m-insert-after-id').value = insertAfterId || '';
+  document.getElementById('m-start').value = calcInsertStart(queue, insertAfterId, newShifts);
+  refreshMeshQueuePreview();
+}
+
+function onMeshAreaSelectChange() {
+  document.getElementById('m-insert-after-id').value = '';
+  refreshMeshQueuePreview();
+}
+
 function openMeshModal(id = null) {
   editMeshId = id;
   document.getElementById('mesh-modal-title').textContent = id ? 'Edit Mesh' : 'New Mesh';
+  const queueSection = document.getElementById('mesh-queue-section');
+
   if (id) {
     const m = meshes.find(x=>x.id===id);
     document.getElementById('m-name').value = m.name;
@@ -1680,6 +1877,7 @@ function openMeshModal(id = null) {
     document.getElementById('m-status').value = m.status;
     document.getElementById('m-storage').value = m.storage_area || '';
     document.getElementById('m-notes').value = m.notes || '';
+    queueSection.style.display = 'none';
   } else {
     document.getElementById('m-name').value = '';
     document.getElementById('m-shifts').value = 1;
@@ -1688,34 +1886,53 @@ function openMeshModal(id = null) {
     document.getElementById('m-status').value = 'planned';
     document.getElementById('m-storage').value = '';
     document.getElementById('m-notes').value = '';
+    document.getElementById('m-insert-after-id').value = '';
+    queueSection.style.display = 'block';
+    const defaultArea = document.getElementById('m-area').value;
+    const q = meshAreaQueue(defaultArea);
+    if (q.length > 0) document.getElementById('m-insert-after-id').value = q[q.length-1].id;
+    refreshMeshQueuePreview();
   }
   document.getElementById('mesh-modal').classList.add('open');
 }
 function closeMeshModal() { document.getElementById('mesh-modal').classList.remove('open'); }
 
 async function saveMesh() {
-  const data = {
-    name: document.getElementById('m-name').value.trim(),
-    area: document.getElementById('m-area').value,
-    shifts_required: parseFloat(document.getElementById('m-shifts').value),
-    shifts_completed: parseFloat(document.getElementById('m-shifts-done').value),
-    start_shift: parseInt(document.getElementById('m-start').value) || null,
-    status: document.getElementById('m-status').value,
-    storage_area: document.getElementById('m-storage').value || null,
-    notes: document.getElementById('m-notes').value || null,
-  };
-  if (!data.name) { showToast('Name required', 'error'); return; }
+  const name           = document.getElementById('m-name').value.trim();
+  const area           = document.getElementById('m-area').value;
+  const shifts_req     = parseFloat(document.getElementById('m-shifts').value);
+  const shifts_done    = parseFloat(document.getElementById('m-shifts-done').value);
+  const status         = document.getElementById('m-status').value;
+  const storage_area   = document.getElementById('m-storage').value || null;
+  const notes          = document.getElementById('m-notes').value || null;
+  const insertAfter    = document.getElementById('m-insert-after-id').value;
+  const start_shift    = parseInt(document.getElementById('m-start').value) || null;
+
+  if (!name) { showToast('Name required', 'error'); return; }
+  const data = { name, area, shifts_required: shifts_req, shifts_completed: shifts_done, start_shift, status, storage_area, notes };
+
   try {
     if (editMeshId) {
       const updated = await api(`/api/meshes/${editMeshId}`, 'PUT', data);
       meshes = meshes.map(m => m.id===editMeshId ? updated : m);
     } else {
+      // INSERT: push meshes after insertion point forward
+      const queue = meshAreaQueue(area);
+      const insertIdx = (insertAfter === '' || insertAfter === null)
+        ? 0 : (queue.findIndex(m => m.id === insertAfter) + 1);
       const created = await api('/api/meshes', 'POST', data);
       meshes.push(created);
+      // Re-sequence meshes after insertion point
+      let cursor = start_shift + Math.ceil(shifts_req);
+      for (const m of queue.slice(insertIdx)) {
+        const updated = await api(`/api/meshes/${m.id}`, 'PUT', { start_shift: cursor });
+        meshes = meshes.map(x => x.id === m.id ? updated : x);
+        cursor += Math.ceil(m.shifts_required);
+      }
     }
     closeMeshModal();
-    renderMeshTable(); renderDashboard(); updateHeader();
-    showToast(editMeshId ? 'Mesh updated ✓' : 'Mesh created ✓');
+    renderAll();
+    showToast(editMeshId ? 'Mesh updated ✓' : 'Mesh added to queue ✓');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
@@ -2186,12 +2403,12 @@ function renderGantt() {
           ondragend="onGanttPillDragEnd(event,'${item.id}')">${label}</div>`;
       });
 
-      // Drop zone on each data cell
+      // Drop zone on each data cell — pass shift index so vertical drop inserts at that position
       const dropArea = col.area;
       const dropType = col.type === 'mesh' ? 'meshes' : 'cages';
       dataRows += `<div class="${cellCls}" style="grid-column:${gridCol};grid-row:${gridRow}"
         ondragover="onGanttCellDragOver(event,'${dropArea}','${dropType}')"
-        ondrop="onGanttCellDrop(event,'${dropArea}','${dropType}')"
+        ondrop="onGanttCellDrop(event,'${dropArea}','${dropType}',${s})"
         ondragleave="onGanttCellDragLeave(event)">${pills}</div>`;
     });
   }
