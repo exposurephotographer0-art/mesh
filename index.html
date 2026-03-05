@@ -1,0 +1,1462 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CageTrack — Production Programme</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0d0f12;
+    --surface: #13161b;
+    --card: #1a1e26;
+    --border: #252a35;
+    --accent: #e8ff4a;
+    --accent2: #4af0d4;
+    --warn: #ff7043;
+    --ok: #69ff8c;
+    --text: #e8ecf0;
+    --muted: #5a6275;
+    --mesh-color: #4af0d4;
+    --cage-color: #e8ff4a;
+    --VST110: #ff6b9d;
+    --VST120: #c084fc;
+    --VST130: #60a5fa;
+    --VST140: #fb923c;
+    --M1: #34d399; --M2: #a3e635; --M3: #22d3ee; --M4: #818cf8; --M5: #f472b6;
+    --font-display: 'Syne', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius: 6px;
+    --shift-w: 32px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    height: 56px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: var(--font-display);
+    font-size: 20px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo-badge {
+    background: var(--accent);
+    color: #0d0f12;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 3px;
+    letter-spacing: 1px;
+  }
+  .header-stats {
+    display: flex;
+    gap: 20px;
+    align-items: center;
+  }
+  .stat-pill {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    border: 1px solid var(--border);
+    border-radius: 99px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .stat-pill .val { color: var(--text); font-weight: 500; }
+  .header-actions { display: flex; gap: 8px; }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 0;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    padding: 0 24px;
+  }
+  .tab {
+    padding: 12px 20px;
+    cursor: pointer;
+    font-family: var(--font-display);
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    border-bottom: 2px solid transparent;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); }
+
+  /* ── LAYOUT ── */
+  .main { padding: 20px 24px; }
+  .page { display: none; }
+  .page.active { display: block; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    padding: 7px 14px;
+    border: none;
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    font-weight: 500;
+    transition: all 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-primary { background: var(--accent); color: #0d0f12; }
+  .btn-primary:hover { background: #d4e840; }
+  .btn-secondary { background: var(--card); color: var(--text); border: 1px solid var(--border); }
+  .btn-secondary:hover { border-color: var(--accent); color: var(--accent); }
+  .btn-danger { background: transparent; color: var(--warn); border: 1px solid var(--warn); }
+  .btn-danger:hover { background: var(--warn); color: white; }
+  .btn-sm { padding: 4px 10px; font-size: 11px; }
+  .btn-icon { padding: 6px; width: 30px; height: 30px; justify-content: center; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 16px;
+  }
+  .card-title {
+    font-family: var(--font-display);
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--text);
+  }
+
+  /* ── FORM ── */
+  .form-row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  .form-group { display: flex; flex-direction: column; gap: 4px; min-width: 120px; flex: 1; }
+  .form-group label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; }
+  .form-group input,
+  .form-group select,
+  .form-group textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .form-group input:focus,
+  .form-group select:focus { border-color: var(--accent); }
+  .form-group select option { background: var(--surface); }
+
+  /* ── TABLE ── */
+  .data-table { width: 100%; border-collapse: collapse; }
+  .data-table th {
+    text-align: left;
+    padding: 8px 10px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  .data-table td {
+    padding: 8px 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    vertical-align: middle;
+  }
+  .data-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 99px;
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+  }
+  .badge-planned { background: rgba(90,98,117,0.3); color: var(--muted); }
+  .badge-in_progress { background: rgba(232,255,74,0.15); color: var(--accent); border: 1px solid rgba(232,255,74,0.3); }
+  .badge-stored { background: rgba(74,240,212,0.15); color: var(--accent2); }
+  .badge-married { background: rgba(129,140,248,0.2); color: #818cf8; }
+  .badge-used { background: rgba(105,255,140,0.15); color: var(--ok); }
+  .badge-complete { background: rgba(105,255,140,0.2); color: var(--ok); border: 1px solid rgba(105,255,140,0.3); }
+
+  /* ── AREA PILLS ── */
+  .area-pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 500;
+  }
+  .area-M1 { background: rgba(52,211,153,0.2); color: var(--M1); }
+  .area-M2 { background: rgba(163,230,53,0.2); color: var(--M2); }
+  .area-M3 { background: rgba(34,211,238,0.2); color: var(--M3); }
+  .area-M4 { background: rgba(129,140,248,0.2); color: var(--M4); }
+  .area-M5 { background: rgba(244,114,182,0.2); color: var(--M5); }
+  .area-VST110 { background: rgba(255,107,157,0.2); color: var(--VST110); }
+  .area-VST120 { background: rgba(192,132,252,0.2); color: var(--VST120); }
+  .area-VST130 { background: rgba(96,165,250,0.2); color: var(--VST130); }
+  .area-VST140 { background: rgba(251,146,60,0.2); color: var(--VST140); }
+
+  /* ── PROGRESS BAR ── */
+  .progress-bar {
+    height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    overflow: hidden;
+    min-width: 80px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: var(--accent);
+    border-radius: 2px;
+    transition: width 0.3s;
+  }
+  .progress-fill.warn { background: var(--warn); }
+  .progress-fill.ok { background: var(--ok); }
+
+  /* ── GANTT ── */
+  #gantt-container {
+    overflow-x: auto;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+  }
+  .gantt-wrap { min-width: max-content; }
+  .gantt-header {
+    display: flex;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  .gantt-label-col { width: 220px; min-width: 220px; padding: 8px 12px; font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; border-right: 1px solid var(--border); }
+  .gantt-shift-headers { display: flex; }
+  .gantt-day-group { display: flex; flex-direction: column; border-right: 1px solid rgba(255,255,255,0.05); }
+  .gantt-day-label { font-size: 10px; color: var(--muted); text-align: center; padding: 2px 0; border-bottom: 1px solid var(--border); white-space: nowrap; overflow: hidden; }
+  .gantt-shifts-row { display: flex; }
+  .gantt-shift-cell {
+    width: var(--shift-w);
+    text-align: center;
+    font-size: 9px;
+    color: var(--muted);
+    padding: 2px 0;
+    border-right: 1px solid rgba(255,255,255,0.03);
+  }
+  .gantt-shift-cell.shift-1 { color: #fbbf24; }
+  .gantt-shift-cell.shift-2 { color: var(--muted); }
+  .gantt-shift-cell.shift-3 { color: #60a5fa; }
+  .gantt-row {
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid rgba(255,255,255,0.03);
+    min-height: 34px;
+  }
+  .gantt-row:hover { background: rgba(255,255,255,0.015); }
+  .gantt-row-label {
+    width: 220px;
+    min-width: 220px;
+    padding: 6px 12px;
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .gantt-row-label .row-name { font-size: 12px; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .gantt-row-label .row-sub { font-size: 10px; color: var(--muted); }
+  .gantt-cells { display: flex; position: relative; }
+  .gantt-cell {
+    width: var(--shift-w);
+    height: 34px;
+    border-right: 1px solid rgba(255,255,255,0.02);
+    position: relative;
+  }
+  .gantt-cell.weekend { background: rgba(255,255,255,0.015); }
+  .gantt-bar {
+    position: absolute;
+    top: 5px;
+    height: 24px;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    font-size: 10px;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    cursor: pointer;
+    transition: filter 0.15s;
+    z-index: 2;
+  }
+  .gantt-bar:hover { filter: brightness(1.2); }
+  .gantt-bar .bar-done {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    border-radius: 4px 0 0 4px;
+    background: rgba(0,0,0,0.3);
+    opacity: 0.5;
+  }
+  .gantt-bar .bar-label { position: relative; z-index: 1; }
+  .gantt-section-header {
+    display: flex;
+    align-items: center;
+    background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid var(--border);
+    min-height: 26px;
+  }
+  .gantt-section-title {
+    width: 220px;
+    min-width: 220px;
+    padding: 4px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 700;
+    border-right: 1px solid var(--border);
+  }
+  .gantt-section-line { flex: 1; border-top: 1px solid var(--border); }
+  .today-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 1px;
+    background: var(--warn);
+    opacity: 0.6;
+    pointer-events: none;
+    z-index: 5;
+  }
+
+  /* ── GRID LAYOUT ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+
+  /* ── VST STATUS CARDS ── */
+  .vst-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .vst-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+  }
+  .vst-card.VST110::before { background: var(--VST110); }
+  .vst-card.VST120::before { background: var(--VST120); }
+  .vst-card.VST130::before { background: var(--VST130); }
+  .vst-card.VST140::before { background: var(--VST140); }
+  .vst-name { font-family: var(--font-display); font-size: 15px; font-weight: 700; margin-bottom: 6px; }
+  .vst-status { font-size: 11px; color: var(--muted); margin-bottom: 10px; }
+  .vst-cage-name { font-size: 13px; color: var(--text); }
+  .vst-empty { font-size: 12px; color: var(--muted); font-style: italic; }
+
+  /* ── STORAGE MAP ── */
+  .storage-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; }
+  .storage-cell {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px;
+    min-height: 70px;
+    cursor: pointer;
+    transition: border-color 0.15s;
+  }
+  .storage-cell:hover { border-color: var(--accent2); }
+  .storage-cell.occupied { border-color: rgba(74,240,212,0.3); background: rgba(74,240,212,0.05); }
+  .storage-label { font-size: 10px; font-weight: 700; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; }
+  .storage-items { display: flex; flex-direction: column; gap: 3px; }
+  .storage-item { font-size: 10px; color: var(--accent2); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 200;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    backdrop-filter: blur(4px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .modal-overlay.open { opacity: 1; pointer-events: all; }
+  .modal {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    width: 520px;
+    max-width: 95vw;
+    max-height: 90vh;
+    overflow-y: auto;
+    transform: translateY(20px);
+    transition: transform 0.2s;
+  }
+  .modal-overlay.open .modal { transform: translateY(0); }
+  .modal-title {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 700;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 20px; }
+
+  /* ── TOAST ── */
+  #toast {
+    position: fixed;
+    bottom: 24px;
+    right: 24px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 16px;
+    font-size: 12px;
+    z-index: 999;
+    opacity: 0;
+    transform: translateY(10px);
+    transition: all 0.2s;
+    pointer-events: none;
+    max-width: 300px;
+  }
+  #toast.show { opacity: 1; transform: translateY(0); }
+  #toast.success { border-color: var(--ok); color: var(--ok); }
+  #toast.error { border-color: var(--warn); color: var(--warn); }
+
+  /* ── SHIFT COUNTER ── */
+  .shift-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 3px;
+  }
+  .shift-input-wrap input {
+    width: 50px;
+    text-align: center;
+    border: none !important;
+    background: transparent !important;
+    padding: 4px !important;
+  }
+  .shift-spin { background: var(--border); border: none; border-radius: 3px; width: 22px; height: 22px; cursor: pointer; color: var(--text); display: flex; align-items: center; justify-content: center; font-size: 14px; }
+  .shift-spin:hover { background: var(--accent); color: #000; }
+
+  /* ── INLINE EDIT ── */
+  .inline-edit {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .inline-edit input {
+    width: 60px;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    border-radius: 3px;
+    color: var(--text);
+    padding: 2px 6px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+  }
+
+  /* ── SUMMARY COUNTERS ── */
+  .summary-row { display: flex; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+  .summary-box {
+    flex: 1;
+    min-width: 100px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 12px 14px;
+  }
+  .summary-box .s-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 4px; }
+  .summary-box .s-val { font-family: var(--font-display); font-size: 24px; font-weight: 700; }
+  .summary-box .s-sub { font-size: 10px; color: var(--muted); margin-top: 2px; }
+
+  /* config panel */
+  .config-section { margin-bottom: 24px; }
+  .config-section h3 { font-family: var(--font-display); font-size: 14px; font-weight: 700; margin-bottom: 12px; color: var(--accent); }
+
+  /* checkbox multi-select for meshes */
+  .mesh-picker { display: flex; flex-wrap: wrap; gap: 6px; max-height: 150px; overflow-y: auto; padding: 4px; }
+  .mesh-check-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 4px 8px;
+    cursor: pointer;
+    font-size: 11px;
+    transition: border-color 0.15s;
+  }
+  .mesh-check-item.selected { border-color: var(--accent); background: rgba(232,255,74,0.07); color: var(--accent); }
+  .mesh-check-item input { display: none; }
+
+  /* Responsive */
+  @media (max-width: 768px) {
+    .grid-4 { grid-template-columns: 1fr 1fr; }
+    .grid-3 { grid-template-columns: 1fr 1fr; }
+    .grid-2 { grid-template-columns: 1fr; }
+    .storage-grid { grid-template-columns: repeat(3, 1fr); }
+    header { padding: 0 12px; }
+    .header-stats { display: none; }
+    .main { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    ⬡ CageTrack <span class="logo-badge">LIVE</span>
+  </div>
+  <div class="header-stats">
+    <div class="stat-pill">Meshes <span class="val" id="hdr-meshes">—</span></div>
+    <div class="stat-pill">Cages <span class="val" id="hdr-cages">—</span></div>
+    <div class="stat-pill">In Progress <span class="val" id="hdr-active">—</span></div>
+    <div class="stat-pill">Programme <span class="val" id="hdr-prog">—</span></div>
+  </div>
+  <div class="header-actions">
+    <button class="btn btn-secondary btn-sm" onclick="openSettings()">⚙ Settings</button>
+    <button class="btn btn-primary btn-sm" onclick="refreshAll()">↻ Refresh</button>
+  </div>
+</header>
+
+<div class="tabs">
+  <div class="tab active" onclick="showTab('dashboard')">Dashboard</div>
+  <div class="tab" onclick="showTab('programme')">Programme</div>
+  <div class="tab" onclick="showTab('meshes')">Meshes</div>
+  <div class="tab" onclick="showTab('cages')">Cages</div>
+  <div class="tab" onclick="showTab('storage')">Storage Map</div>
+</div>
+
+<div class="main">
+
+  <!-- ── DASHBOARD ── -->
+  <div id="page-dashboard" class="page active">
+    <div class="summary-row" id="summary-row">
+      <div class="summary-box"><div class="s-label">Total Meshes</div><div class="s-val" id="s-total-meshes">—</div><div class="s-sub">planned + live</div></div>
+      <div class="summary-box"><div class="s-label">In Progress</div><div class="s-val" id="s-in-progress">—</div><div class="s-sub">meshes &amp; cages</div></div>
+      <div class="summary-box"><div class="s-label">Stored Meshes</div><div class="s-val" id="s-stored">—</div><div class="s-sub">awaiting build</div></div>
+      <div class="summary-box"><div class="s-label">Cages Complete</div><div class="s-val" id="s-cages-done">—</div><div class="s-sub">this programme</div></div>
+      <div class="summary-box"><div class="s-label">Shifts Remaining</div><div class="s-val" id="s-shifts-rem">—</div><div class="s-sub">all active work</div></div>
+    </div>
+
+    <div class="grid-4" style="margin-bottom:20px">
+      <div class="vst-card VST110" id="vst-VST110"><div class="vst-name" style="color:var(--VST110)">VST 110</div><div class="vst-status">—</div><div id="vst-cage-VST110" class="vst-empty">Empty</div></div>
+      <div class="vst-card VST120" id="vst-VST120"><div class="vst-name" style="color:var(--VST120)">VST 120</div><div class="vst-status">—</div><div id="vst-cage-VST120" class="vst-empty">Empty</div></div>
+      <div class="vst-card VST130" id="vst-VST130"><div class="vst-name" style="color:var(--VST130)">VST 130</div><div class="vst-status">—</div><div id="vst-cage-VST130" class="vst-empty">Empty</div></div>
+      <div class="vst-card VST140" id="vst-VST140"><div class="vst-name" style="color:var(--VST140)">VST 140</div><div class="vst-status">—</div><div id="vst-cage-VST140" class="vst-empty">Empty</div></div>
+    </div>
+
+    <div class="grid-2">
+      <div class="card">
+        <div class="card-title">🔩 Recent Meshes</div>
+        <table class="data-table" id="dash-mesh-table">
+          <thead><tr><th>Name</th><th>Area</th><th>Status</th><th>Progress</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <div class="card-title">⬡ Active Cages</div>
+        <table class="data-table" id="dash-cage-table">
+          <thead><tr><th>Name</th><th>VST</th><th>Status</th><th>Progress</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROGRAMME (GANTT) ── -->
+  <div id="page-programme" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Production Programme — Gantt View</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <div style="display:flex;gap:12px;font-size:11px;color:var(--muted);align-items:center;">
+          <span><span style="display:inline-block;width:12px;height:12px;background:var(--mesh-color);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Mesh</span>
+          <span><span style="display:inline-block;width:12px;height:12px;background:var(--cage-color);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Cage</span>
+        </div>
+        <button class="btn btn-secondary btn-sm" onclick="refreshAll()">↻ Refresh</button>
+      </div>
+    </div>
+    <div id="gantt-container">
+      <div id="gantt-inner" class="gantt-wrap"></div>
+    </div>
+  </div>
+
+  <!-- ── MESHES ── -->
+  <div id="page-meshes" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Mesh Production</div>
+      <button class="btn btn-primary" onclick="openMeshModal()">+ New Mesh</button>
+    </div>
+    <div class="card">
+      <table class="data-table" id="mesh-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>Area</th><th>Shifts Req.</th><th>Done</th>
+            <th>Status</th><th>Storage</th><th>Cage</th><th>Start Shift</th><th>Progress</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="mesh-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── CAGES ── -->
+  <div id="page-cages" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Cage Build Programme</div>
+      <button class="btn btn-primary" onclick="openCageModal()">+ New Cage</button>
+    </div>
+    <div class="card">
+      <table class="data-table" id="cage-table">
+        <thead>
+          <tr>
+            <th>Name</th><th>VST Area</th><th>Shifts Req.</th><th>Done</th>
+            <th>Status</th><th>Meshes</th><th>Start Shift</th><th>Progress</th><th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="cage-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ── STORAGE MAP ── -->
+  <div id="page-storage" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Storage Areas — S1 to S15</div>
+    </div>
+    <div class="storage-grid" id="storage-grid"></div>
+  </div>
+
+</div>
+
+<!-- ── MESH MODAL ── -->
+<div id="mesh-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="mesh-modal-title">New Mesh</span>
+      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeMeshModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Mesh Name / ID</label>
+        <input id="m-name" type="text" placeholder="e.g. MESH-001">
+      </div>
+      <div class="form-group">
+        <label>Production Area</label>
+        <select id="m-area">
+          <option value="M1">M1</option><option value="M2">M2</option>
+          <option value="M3">M3</option><option value="M4">M4</option>
+          <option value="M5">M5</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Shifts Required</label>
+        <input id="m-shifts" type="number" step="0.5" min="0.5" value="1">
+      </div>
+      <div class="form-group">
+        <label>Shifts Completed</label>
+        <input id="m-shifts-done" type="number" step="0.5" min="0" value="0">
+      </div>
+      <div class="form-group">
+        <label>Start Shift #</label>
+        <input id="m-start" type="number" min="1" placeholder="e.g. 1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select id="m-status">
+          <option value="planned">Planned</option>
+          <option value="in_progress">In Progress</option>
+          <option value="stored">Stored</option>
+          <option value="married">Married</option>
+          <option value="used">Used in Cage</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Storage Area (if stored)</label>
+        <select id="m-storage">
+          <option value="">None</option>
+          <script>for(let i=1;i<=15;i++) document.write(`<option value="S${i}">S${i}</option>`)</script>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1">
+        <label>Notes</label>
+        <textarea id="m-notes" rows="2" placeholder="Optional notes..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeMeshModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveMesh()">Save Mesh</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── CAGE MODAL ── -->
+<div id="cage-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span id="cage-modal-title">New Cage</span>
+      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeCageModal()">✕</button>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:2">
+        <label>Cage Name / ID</label>
+        <input id="c-name" type="text" placeholder="e.g. CAGE-001">
+      </div>
+      <div class="form-group">
+        <label>VST Area</label>
+        <select id="c-vst">
+          <option value="VST110">VST 110</option>
+          <option value="VST120">VST 120</option>
+          <option value="VST130">VST 130</option>
+          <option value="VST140">VST 140</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Shifts Required</label>
+        <input id="c-shifts" type="number" step="0.5" min="0.5" value="3">
+      </div>
+      <div class="form-group">
+        <label>Shifts Completed</label>
+        <input id="c-shifts-done" type="number" step="0.5" min="0" value="0">
+      </div>
+      <div class="form-group">
+        <label>Start Shift #</label>
+        <input id="c-start" type="number" min="1" placeholder="e.g. 1">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group">
+        <label>Status</label>
+        <select id="c-status">
+          <option value="planned">Planned</option>
+          <option value="in_progress">In Progress</option>
+          <option value="complete">Complete</option>
+        </select>
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:10px">
+      <label>Assign Meshes (up to 4)</label>
+      <div class="mesh-picker" id="cage-mesh-picker"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group" style="flex:1">
+        <label>Notes</label>
+        <textarea id="c-notes" rows="2" placeholder="Optional notes..."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeCageModal()">Cancel</button>
+      <button class="btn btn-primary" onclick="saveCage()">Save Cage</button>
+    </div>
+  </div>
+</div>
+
+<!-- ── SETTINGS MODAL ── -->
+<div id="settings-modal" class="modal-overlay">
+  <div class="modal">
+    <div class="modal-title">
+      <span>Settings</span>
+      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeSettings()">✕</button>
+    </div>
+    <div class="config-section">
+      <h3>API Connection</h3>
+      <div class="form-row">
+        <div class="form-group" style="flex:1">
+          <label>Worker URL</label>
+          <input id="worker-url" type="text" placeholder="https://your-worker.workers.dev">
+        </div>
+      </div>
+      <button class="btn btn-secondary btn-sm" onclick="testConnection()">Test Connection</button>
+      <span id="conn-status" style="margin-left:10px;font-size:11px;"></span>
+    </div>
+    <div class="config-section">
+      <h3>Programme Settings</h3>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Plan Start Date</label>
+          <input id="prog-start" type="date">
+        </div>
+        <div class="form-group">
+          <label>Shifts Per Day</label>
+          <select id="prog-spd">
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3" selected>3</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Weeks to Plan</label>
+          <select id="prog-weeks">
+            <option value="2">2</option>
+            <option value="4" selected>4</option>
+            <option value="6">6</option>
+            <option value="8">8</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary btn-sm" onclick="saveProgramme()">Save Programme</button>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeSettings()">Close</button>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+let API = localStorage.getItem('cagetrack-api') || '';
+let programme = { plan_start_date: new Date().toISOString().slice(0,10), shifts_per_day: 3, weeks: 4 };
+let meshes = [];
+let cages = [];
+let editMeshId = null;
+let editCageId = null;
+let selectedMeshIds = [];
+
+// ═══════════════════════════════════════════════════════
+// API HELPERS
+// ═══════════════════════════════════════════════════════
+async function api(path, method = 'GET', body = null) {
+  if (!API) { showToast('Set your Worker URL in Settings ⚙', 'error'); throw new Error('No API'); }
+  const opts = { method, headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) };
+  const res = await fetch(API + path, opts);
+  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
+  return res.json();
+}
+
+function showToast(msg, type = 'success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + type;
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.className = '', 3000);
+}
+
+// ═══════════════════════════════════════════════════════
+// TABS
+// ═══════════════════════════════════════════════════════
+function showTab(name) {
+  document.querySelectorAll('.tab').forEach((t, i) => {
+    const names = ['dashboard','programme','meshes','cages','storage'];
+    t.classList.toggle('active', names[i] === name);
+  });
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + name).classList.add('active');
+  if (name === 'programme') renderGantt();
+  if (name === 'storage') renderStorage();
+}
+
+// ═══════════════════════════════════════════════════════
+// DATA LOAD
+// ═══════════════════════════════════════════════════════
+async function refreshAll() {
+  try {
+    [meshes, cages, programme] = await Promise.all([
+      api('/api/meshes'),
+      api('/api/cages'),
+      api('/api/programme'),
+    ]);
+    renderDashboard();
+    renderMeshTable();
+    renderCageTable();
+    updateHeader();
+    const activeTab = document.querySelector('.tab.active')?.textContent?.toLowerCase();
+    if (activeTab === 'programme') renderGantt();
+    if (activeTab === 'storage map') renderStorage();
+  } catch (e) {
+    if (API) showToast('Error: ' + e.message, 'error');
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// HEADER STATS
+// ═══════════════════════════════════════════════════════
+function updateHeader() {
+  document.getElementById('hdr-meshes').textContent = meshes.length;
+  document.getElementById('hdr-cages').textContent = cages.length;
+  document.getElementById('hdr-active').textContent =
+    meshes.filter(m=>m.status==='in_progress').length + cages.filter(c=>c.status==='in_progress').length;
+  const spd = programme.shifts_per_day || 3;
+  document.getElementById('hdr-prog').textContent = `${programme.weeks || 4}w / ${(programme.weeks||4)*7*spd} shifts`;
+}
+
+// ═══════════════════════════════════════════════════════
+// DASHBOARD
+// ═══════════════════════════════════════════════════════
+function renderDashboard() {
+  document.getElementById('s-total-meshes').textContent = meshes.length;
+  document.getElementById('s-in-progress').textContent =
+    meshes.filter(m=>m.status==='in_progress').length + cages.filter(c=>c.status==='in_progress').length;
+  document.getElementById('s-stored').textContent = meshes.filter(m=>m.status==='stored').length;
+  document.getElementById('s-cages-done').textContent = cages.filter(c=>c.status==='complete').length;
+  const rem = meshes.reduce((a,m)=>a+(m.shifts_required-m.shifts_completed),0) +
+              cages.reduce((a,c)=>a+(c.shifts_required-c.shifts_completed),0);
+  document.getElementById('s-shifts-rem').textContent = Math.max(0, rem).toFixed(1);
+
+  // VST cards
+  ['VST110','VST120','VST130','VST140'].forEach(vst => {
+    const active = cages.find(c => c.vst_area === vst && c.status !== 'complete');
+    const el = document.getElementById('vst-cage-' + vst);
+    const statusEl = document.querySelector(`#vst-${vst} .vst-status`);
+    if (active) {
+      el.className = 'vst-cage-name';
+      el.textContent = active.name;
+      const pct = active.shifts_required > 0 ? Math.round(active.shifts_completed / active.shifts_required * 100) : 0;
+      statusEl.innerHTML = `<span class="badge badge-${active.status}">${active.status.replace('_',' ')}</span> &nbsp; ${pct}% complete`;
+    } else {
+      el.className = 'vst-empty';
+      el.textContent = 'Empty';
+      statusEl.textContent = 'Available';
+    }
+  });
+
+  // Recent meshes
+  const mt = document.querySelector('#dash-mesh-table tbody');
+  const recentMeshes = [...meshes].sort((a,b) => (b.start_shift||0)-(a.start_shift||0)).slice(0,8);
+  mt.innerHTML = recentMeshes.map(m => `
+    <tr>
+      <td>${m.name}</td>
+      <td><span class="area-pill area-${m.area}">${m.area}</span></td>
+      <td><span class="badge badge-${m.status}">${m.status.replace('_',' ')}</span></td>
+      <td>${progressBar(m.shifts_completed, m.shifts_required)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No meshes yet</td></tr>';
+
+  // Active cages
+  const ct = document.querySelector('#dash-cage-table tbody');
+  const activeCages = cages.filter(c=>c.status!=='complete').slice(0,8);
+  ct.innerHTML = activeCages.map(c => `
+    <tr>
+      <td>${c.name}</td>
+      <td><span class="area-pill area-${c.vst_area}">${c.vst_area}</span></td>
+      <td><span class="badge badge-${c.status}">${c.status.replace('_',' ')}</span></td>
+      <td>${progressBar(c.shifts_completed, c.shifts_required)}</td>
+    </tr>`).join('') || '<tr><td colspan="4" style="color:var(--muted);text-align:center;padding:20px">No cages yet</td></tr>';
+}
+
+function progressBar(done, req) {
+  const pct = req > 0 ? Math.min(100, done/req*100) : 0;
+  const cls = pct >= 100 ? 'ok' : pct > 50 ? '' : '';
+  return `<div style="display:flex;align-items:center;gap:6px">
+    <div class="progress-bar"><div class="progress-fill ${cls}" style="width:${pct}%"></div></div>
+    <span style="font-size:10px;color:var(--muted)">${done}/${req}</span>
+  </div>`;
+}
+
+// ═══════════════════════════════════════════════════════
+// MESH TABLE
+// ═══════════════════════════════════════════════════════
+function renderMeshTable() {
+  const tbody = document.getElementById('mesh-tbody');
+  tbody.innerHTML = meshes.map(m => {
+    const pct = m.shifts_required > 0 ? Math.min(100, m.shifts_completed/m.shifts_required*100) : 0;
+    const cageName = m.cage_id ? (cages.find(c=>c.id===m.cage_id)?.name || m.cage_id) : '—';
+    return `<tr>
+      <td style="font-weight:500">${m.name}</td>
+      <td><span class="area-pill area-${m.area}">${m.area}</span></td>
+      <td>
+        <div class="inline-edit">
+          <input type="number" step="0.5" min="0.5" value="${m.shifts_required}" style="width:55px"
+            onchange="quickUpdateMesh('${m.id}','shifts_required',this.value)">
+        </div>
+      </td>
+      <td>
+        <div class="inline-edit">
+          <input type="number" step="0.5" min="0" value="${m.shifts_completed}" style="width:55px"
+            onchange="quickUpdateMesh('${m.id}','shifts_completed',this.value)">
+        </div>
+      </td>
+      <td><span class="badge badge-${m.status}">${m.status.replace('_',' ')}</span></td>
+      <td>${m.storage_area || '—'}</td>
+      <td style="font-size:11px;color:var(--muted)">${cageName}</td>
+      <td>${m.start_shift || '—'}</td>
+      <td>${progressBar(m.shifts_completed, m.shifts_required)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="openMeshModal('${m.id}')">✎</button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="deleteMesh('${m.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="10" style="color:var(--muted);text-align:center;padding:24px">No meshes yet — click <strong>+ New Mesh</strong> to add one</td></tr>`;
+}
+
+async function quickUpdateMesh(id, field, value) {
+  try {
+    const updated = await api(`/api/meshes/${id}`, 'PUT', { [field]: parseFloat(value) });
+    const idx = meshes.findIndex(m=>m.id===id);
+    if (idx > -1) meshes[idx] = updated;
+    renderDashboard();
+    updateHeader();
+    showToast('Updated ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteMesh(id) {
+  if (!confirm('Delete this mesh?')) return;
+  try {
+    await api(`/api/meshes/${id}`, 'DELETE');
+    meshes = meshes.filter(m=>m.id!==id);
+    renderMeshTable(); renderDashboard(); updateHeader();
+    showToast('Mesh deleted');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// CAGE TABLE
+// ═══════════════════════════════════════════════════════
+function renderCageTable() {
+  const tbody = document.getElementById('cage-tbody');
+  tbody.innerHTML = cages.map(c => {
+    const meshNames = (c.meshes||[]).map(m=>m.name).join(', ') || '—';
+    return `<tr>
+      <td style="font-weight:500">${c.name}</td>
+      <td><span class="area-pill area-${c.vst_area}">${c.vst_area}</span></td>
+      <td>
+        <div class="inline-edit">
+          <input type="number" step="0.5" min="0.5" value="${c.shifts_required}" style="width:55px"
+            onchange="quickUpdateCage('${c.id}','shifts_required',this.value)">
+        </div>
+      </td>
+      <td>
+        <div class="inline-edit">
+          <input type="number" step="0.5" min="0" value="${c.shifts_completed}" style="width:55px"
+            onchange="quickUpdateCage('${c.id}','shifts_completed',this.value)">
+        </div>
+      </td>
+      <td><span class="badge badge-${c.status}">${c.status.replace('_',' ')}</span></td>
+      <td style="font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis" title="${meshNames}">${meshNames}</td>
+      <td>${c.start_shift || '—'}</td>
+      <td>${progressBar(c.shifts_completed, c.shifts_required)}</td>
+      <td>
+        <div style="display:flex;gap:4px">
+          <button class="btn btn-secondary btn-sm btn-icon" title="Edit" onclick="openCageModal('${c.id}')">✎</button>
+          <button class="btn btn-danger btn-sm btn-icon" title="Delete" onclick="deleteCage('${c.id}')">✕</button>
+        </div>
+      </td>
+    </tr>`;
+  }).join('') || `<tr><td colspan="9" style="color:var(--muted);text-align:center;padding:24px">No cages yet — click <strong>+ New Cage</strong> to add one</td></tr>`;
+}
+
+async function quickUpdateCage(id, field, value) {
+  try {
+    const updated = await api(`/api/cages/${id}`, 'PUT', { [field]: parseFloat(value) });
+    const idx = cages.findIndex(c=>c.id===id);
+    if (idx > -1) cages[idx] = { ...updated, meshes: cages[idx].meshes };
+    renderDashboard(); renderGanttIfActive(); updateHeader();
+    showToast('Updated ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteCage(id) {
+  if (!confirm('Delete this cage?')) return;
+  try {
+    await api(`/api/cages/${id}`, 'DELETE');
+    cages = cages.filter(c=>c.id!==id);
+    renderCageTable(); renderDashboard(); updateHeader();
+    showToast('Cage deleted');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+function renderGanttIfActive() {
+  if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL — MESH
+// ═══════════════════════════════════════════════════════
+function openMeshModal(id = null) {
+  editMeshId = id;
+  document.getElementById('mesh-modal-title').textContent = id ? 'Edit Mesh' : 'New Mesh';
+  if (id) {
+    const m = meshes.find(x=>x.id===id);
+    document.getElementById('m-name').value = m.name;
+    document.getElementById('m-area').value = m.area;
+    document.getElementById('m-shifts').value = m.shifts_required;
+    document.getElementById('m-shifts-done').value = m.shifts_completed;
+    document.getElementById('m-start').value = m.start_shift || '';
+    document.getElementById('m-status').value = m.status;
+    document.getElementById('m-storage').value = m.storage_area || '';
+    document.getElementById('m-notes').value = m.notes || '';
+  } else {
+    document.getElementById('m-name').value = '';
+    document.getElementById('m-shifts').value = 1;
+    document.getElementById('m-shifts-done').value = 0;
+    document.getElementById('m-start').value = '';
+    document.getElementById('m-status').value = 'planned';
+    document.getElementById('m-storage').value = '';
+    document.getElementById('m-notes').value = '';
+  }
+  document.getElementById('mesh-modal').classList.add('open');
+}
+function closeMeshModal() { document.getElementById('mesh-modal').classList.remove('open'); }
+
+async function saveMesh() {
+  const data = {
+    name: document.getElementById('m-name').value.trim(),
+    area: document.getElementById('m-area').value,
+    shifts_required: parseFloat(document.getElementById('m-shifts').value),
+    shifts_completed: parseFloat(document.getElementById('m-shifts-done').value),
+    start_shift: parseInt(document.getElementById('m-start').value) || null,
+    status: document.getElementById('m-status').value,
+    storage_area: document.getElementById('m-storage').value || null,
+    notes: document.getElementById('m-notes').value || null,
+  };
+  if (!data.name) { showToast('Name required', 'error'); return; }
+  try {
+    if (editMeshId) {
+      const updated = await api(`/api/meshes/${editMeshId}`, 'PUT', data);
+      meshes = meshes.map(m => m.id===editMeshId ? updated : m);
+    } else {
+      const created = await api('/api/meshes', 'POST', data);
+      meshes.push(created);
+    }
+    closeMeshModal();
+    renderMeshTable(); renderDashboard(); updateHeader();
+    showToast(editMeshId ? 'Mesh updated ✓' : 'Mesh created ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// MODAL — CAGE
+// ═══════════════════════════════════════════════════════
+function openCageModal(id = null) {
+  editCageId = id;
+  selectedMeshIds = [];
+  document.getElementById('cage-modal-title').textContent = id ? 'Edit Cage' : 'New Cage';
+
+  // Build mesh picker
+  const picker = document.getElementById('cage-mesh-picker');
+  const available = meshes.filter(m => m.status !== 'used' || (id && m.cage_id === id));
+  if (id) {
+    const c = cages.find(x=>x.id===id);
+    selectedMeshIds = (c.meshes||[]).map(m=>m.id);
+    document.getElementById('c-name').value = c.name;
+    document.getElementById('c-vst').value = c.vst_area;
+    document.getElementById('c-shifts').value = c.shifts_required;
+    document.getElementById('c-shifts-done').value = c.shifts_completed;
+    document.getElementById('c-start').value = c.start_shift || '';
+    document.getElementById('c-status').value = c.status;
+    document.getElementById('c-notes').value = c.notes || '';
+  } else {
+    document.getElementById('c-name').value = '';
+    document.getElementById('c-shifts').value = 3;
+    document.getElementById('c-shifts-done').value = 0;
+    document.getElementById('c-start').value = '';
+    document.getElementById('c-status').value = 'planned';
+    document.getElementById('c-notes').value = '';
+  }
+
+  picker.innerHTML = available.length ? available.map(m => `
+    <div class="mesh-check-item ${selectedMeshIds.includes(m.id)?'selected':''}" onclick="toggleMeshPick('${m.id}',this)">
+      <span class="area-pill area-${m.area}" style="font-size:9px;padding:1px 5px">${m.area}</span>
+      ${m.name}
+    </div>`).join('') : `<span style="color:var(--muted);font-size:11px">No available meshes (add meshes first)</span>`;
+
+  document.getElementById('cage-modal').classList.add('open');
+}
+function closeCageModal() { document.getElementById('cage-modal').classList.remove('open'); }
+
+function toggleMeshPick(id, el) {
+  if (selectedMeshIds.includes(id)) {
+    selectedMeshIds = selectedMeshIds.filter(x=>x!==id);
+    el.classList.remove('selected');
+  } else {
+    if (selectedMeshIds.length >= 4) { showToast('Max 4 meshes per cage', 'error'); return; }
+    selectedMeshIds.push(id);
+    el.classList.add('selected');
+  }
+}
+
+async function saveCage() {
+  const data = {
+    name: document.getElementById('c-name').value.trim(),
+    vst_area: document.getElementById('c-vst').value,
+    shifts_required: parseFloat(document.getElementById('c-shifts').value),
+    shifts_completed: parseFloat(document.getElementById('c-shifts-done').value),
+    start_shift: parseInt(document.getElementById('c-start').value) || null,
+    status: document.getElementById('c-status').value,
+    notes: document.getElementById('c-notes').value || null,
+    mesh_ids: selectedMeshIds,
+  };
+  if (!data.name) { showToast('Name required', 'error'); return; }
+  try {
+    if (editCageId) {
+      const updated = await api(`/api/cages/${editCageId}`, 'PUT', data);
+      cages = cages.map(c => c.id===editCageId ? updated : c);
+    } else {
+      const created = await api('/api/cages', 'POST', data);
+      cages.push(created);
+    }
+    // refresh meshes to reflect status changes
+    meshes = await api('/api/meshes');
+    closeCageModal();
+    renderCageTable(); renderMeshTable(); renderDashboard(); updateHeader();
+    showToast(editCageId ? 'Cage updated ✓' : 'Cage created ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// STORAGE MAP
+// ═══════════════════════════════════════════════════════
+function renderStorage() {
+  const grid = document.getElementById('storage-grid');
+  const storageMap = {};
+  for (let i=1;i<=15;i++) storageMap[`S${i}`] = [];
+  meshes.forEach(m => { if (m.storage_area && storageMap[m.storage_area]) storageMap[m.storage_area].push(m); });
+
+  grid.innerHTML = Object.entries(storageMap).map(([area, items]) => `
+    <div class="storage-cell ${items.length?'occupied':''}">
+      <div class="storage-label">${area}</div>
+      <div class="storage-items">
+        ${items.length
+          ? items.map(m=>`<div class="storage-item">⬡ ${m.name} <span class="area-pill area-${m.area}" style="font-size:9px;padding:1px 4px">${m.area}</span></div>`).join('')
+          : `<span style="color:var(--muted);font-size:10px">Empty</span>`}
+      </div>
+    </div>`).join('');
+}
+
+// ═══════════════════════════════════════════════════════
+// GANTT
+// ═══════════════════════════════════════════════════════
+function renderGantt() {
+  const spd = parseInt(programme.shifts_per_day) || 3;
+  const weeks = parseInt(programme.weeks) || 4;
+  const totalShifts = weeks * 7 * spd;
+  const startDate = new Date(programme.plan_start_date || new Date());
+  const inner = document.getElementById('gantt-inner');
+
+  // Build header
+  let dayLabels = '';
+  let shiftLabels = '';
+  for (let s = 0; s < totalShifts; s++) {
+    const dayIdx = Math.floor(s / spd);
+    const shiftInDay = (s % spd) + 1;
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + dayIdx);
+    const dow = date.getDay();
+    const isWeekend = dow === 0 || dow === 6;
+    // day label only on first shift of day
+    if (shiftInDay === 1) {
+      const dStr = date.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+      dayLabels += `<div style="position:absolute;left:${s*(parseInt(getComputedStyle(document.documentElement).getPropertyValue('--shift-w'))||32)}px;width:${spd*32}px;font-size:9px;color:${isWeekend?'var(--warn)':'var(--muted)'};text-align:center;white-space:nowrap;overflow:hidden">${dStr}</div>`;
+    }
+    shiftLabels += `<div class="gantt-shift-cell shift-${shiftInDay}" style="background:${isWeekend?'rgba(255,255,255,0.015)':''}">S${shiftInDay}</div>`;
+  }
+
+  const SW = 32; // shift width px
+  const totalW = totalShifts * SW;
+
+  let rows = '';
+
+  // Mesh rows grouped by area
+  const meshAreas = ['M1','M2','M3','M4','M5'];
+  meshAreas.forEach(area => {
+    const areaMs = meshes.filter(m => m.area === area);
+    if (!areaMs.length) return;
+    rows += `<div class="gantt-section-header">
+      <div class="gantt-section-title" style="color:var(--${area})">${area} Meshes</div>
+      <div style="flex:1"></div>
+    </div>`;
+    areaMs.forEach(m => {
+      const start = (m.start_shift || 1) - 1;
+      const dur = Math.max(0.5, m.shifts_required) * SW;
+      const donePct = m.shifts_required > 0 ? Math.min(1, m.shifts_completed / m.shifts_required) : 0;
+      const color = getComputedStyle(document.documentElement).getPropertyValue(`--${m.area}`).trim() || '#4af0d4';
+      rows += `<div class="gantt-row">
+        <div class="gantt-row-label">
+          <div class="row-name" title="${m.name}">${m.name}</div>
+          <div class="row-sub"><span class="badge badge-${m.status}" style="font-size:9px">${m.status.replace('_',' ')}</span></div>
+        </div>
+        <div class="gantt-cells" style="width:${totalW}px;position:relative;">
+          ${ganttBarHTML(start, m.shifts_required, donePct, m.name, color, 'mesh')}
+          ${ganttGridCells(totalShifts, spd)}
+        </div>
+      </div>`;
+    });
+  });
+
+  // Cage rows grouped by VST
+  const vstAreas = ['VST110','VST120','VST130','VST140'];
+  vstAreas.forEach(vst => {
+    const vstCs = cages.filter(c => c.vst_area === vst);
+    if (!vstCs.length) return;
+    rows += `<div class="gantt-section-header">
+      <div class="gantt-section-title" style="color:var(--${vst})">${vst}</div>
+      <div style="flex:1"></div>
+    </div>`;
+    vstCs.forEach(c => {
+      const start = (c.start_shift || 1) - 1;
+      const donePct = c.shifts_required > 0 ? Math.min(1, c.shifts_completed / c.shifts_required) : 0;
+      const color = getComputedStyle(document.documentElement).getPropertyValue(`--${vst}`).trim() || '#e8ff4a';
+      rows += `<div class="gantt-row">
+        <div class="gantt-row-label">
+          <div class="row-name" title="${c.name}">${c.name}</div>
+          <div class="row-sub"><span class="badge badge-${c.status}" style="font-size:9px">${c.status.replace('_',' ')}</span></div>
+        </div>
+        <div class="gantt-cells" style="width:${totalW}px;position:relative;">
+          ${ganttBarHTML(start, c.shifts_required, donePct, c.name, color, 'cage')}
+          ${ganttGridCells(totalShifts, spd)}
+        </div>
+      </div>`;
+    });
+  });
+
+  if (!rows) rows = `<div style="padding:40px;text-align:center;color:var(--muted)">No meshes or cages scheduled yet. Add items with start shift numbers to see them here.</div>`;
+
+  inner.innerHTML = `
+    <div class="gantt-header">
+      <div class="gantt-label-col">Item</div>
+      <div style="flex:1;position:relative;height:42px;overflow:hidden">
+        <div style="position:absolute;top:0;left:0;right:0;height:20px;display:flex;">${dayLabels}</div>
+        <div style="position:absolute;top:20px;left:0;display:flex;">${shiftLabels}</div>
+      </div>
+    </div>
+    ${rows}`;
+}
+
+function ganttBarHTML(startShift, shiftsRequired, donePct, label, color, type) {
+  const SW = 32;
+  const left = startShift * SW;
+  const width = Math.max(SW * 0.5, shiftsRequired * SW);
+  const doneW = width * donePct;
+  const alpha = type === 'mesh' ? '0.85' : '0.9';
+  return `<div class="gantt-bar" style="left:${left}px;width:${width}px;background:${color};opacity:${alpha};color:#0d0f12" title="${label} — ${Math.round(donePct*100)}% done">
+    <div class="bar-done" style="width:${doneW}px;background:rgba(0,0,0,0.35)"></div>
+    <span class="bar-label" style="font-size:10px;font-weight:600;overflow:hidden">${label}</span>
+  </div>`;
+}
+
+function ganttGridCells(totalShifts, spd) {
+  let html = '';
+  for (let s = 0; s < totalShifts; s++) {
+    const dayIdx = Math.floor(s / spd);
+    const weekDay = (dayIdx % 7);
+    const isWeekend = weekDay === 5 || weekDay === 6;
+    html += `<div class="gantt-cell${isWeekend?' weekend':''}" style="left:${s*32}px;position:absolute;width:32px;height:34px;top:0"></div>`;
+  }
+  return html;
+}
+
+// ═══════════════════════════════════════════════════════
+// SETTINGS
+// ═══════════════════════════════════════════════════════
+function openSettings() {
+  document.getElementById('worker-url').value = API;
+  document.getElementById('prog-start').value = programme.plan_start_date || new Date().toISOString().slice(0,10);
+  document.getElementById('prog-spd').value = programme.shifts_per_day || 3;
+  document.getElementById('prog-weeks').value = programme.weeks || 4;
+  document.getElementById('settings-modal').classList.add('open');
+}
+function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
+
+async function testConnection() {
+  const url = document.getElementById('worker-url').value.trim();
+  const status = document.getElementById('conn-status');
+  try {
+    const res = await fetch(url + '/api/programme');
+    if (res.ok) { status.style.color = 'var(--ok)'; status.textContent = '✓ Connected'; }
+    else { status.style.color = 'var(--warn)'; status.textContent = '✗ Error ' + res.status; }
+  } catch(e) { status.style.color = 'var(--warn)'; status.textContent = '✗ ' + e.message; }
+}
+
+async function saveProgramme() {
+  const url = document.getElementById('worker-url').value.trim();
+  if (url) { API = url; localStorage.setItem('cagetrack-api', url); }
+  const data = {
+    plan_start_date: document.getElementById('prog-start').value,
+    shifts_per_day: parseInt(document.getElementById('prog-spd').value),
+    weeks: parseInt(document.getElementById('prog-weeks').value),
+  };
+  try {
+    programme = await api('/api/programme', 'POST', data);
+    closeSettings();
+    showToast('Programme saved ✓');
+    updateHeader();
+    renderGanttIfActive();
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// INIT
+// ═══════════════════════════════════════════════════════
+document.addEventListener('DOMContentLoaded', () => {
+  // Set today as default start date
+  document.getElementById('prog-start').value = new Date().toISOString().slice(0,10);
+  updateHeader();
+  if (API) {
+    refreshAll();
+  } else {
+    showToast('Set your Worker URL in ⚙ Settings to get started', 'error');
+    setTimeout(() => openSettings(), 800);
+  }
+  // Auto-refresh every 30s
+  setInterval(() => { if (API) refreshAll(); }, 30000);
+});
+</script>
+</body>
+</html>
