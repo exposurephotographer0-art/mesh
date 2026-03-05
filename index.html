@@ -842,6 +842,198 @@
   .sg-time.workday-first { border-top: 2px solid #94a3b8; }
   .sg-data.workday-first { border-top: 2px solid #e2e8f0; }
 
+
+  /* ── ITEM DETAIL PANEL (slide-in from right) ── */
+  .detail-panel-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(17,24,39,0.35);
+    z-index: 150;
+    backdrop-filter: blur(2px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s;
+  }
+  .detail-panel-overlay.open { opacity: 1; pointer-events: all; }
+  .detail-panel {
+    position: fixed;
+    top: 0; right: 0; bottom: 0;
+    width: 460px;
+    max-width: 95vw;
+    background: #ffffff;
+    border-left: 1px solid var(--border);
+    box-shadow: -8px 0 40px rgba(0,0,0,0.12);
+    display: flex;
+    flex-direction: column;
+    transform: translateX(100%);
+    transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+    z-index: 151;
+  }
+  .detail-panel-overlay.open .detail-panel { transform: translateX(0); }
+  .detail-panel-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .detail-panel-title {
+    font-family: var(--font-display);
+    font-size: 16px;
+    font-weight: 700;
+    flex: 1;
+  }
+  .detail-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+  .detail-panel-footer {
+    padding: 12px 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  .dp-section {
+    background: #f8fafc;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 12px;
+  }
+  .dp-section-title {
+    font-family: var(--font-display);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    color: var(--muted);
+    margin-bottom: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .dp-field { display: flex; flex-direction: column; gap: 4px; margin-bottom: 8px; }
+  .dp-field:last-child { margin-bottom: 0; }
+  .dp-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.7px; }
+  .dp-input {
+    background: #ffffff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 7px 10px;
+    font-family: var(--font-mono);
+    font-size: 12px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .dp-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(26,86,219,0.1); }
+  .dp-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .dp-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  /* ── SNAGS ── */
+  .snag-list { display: flex; flex-direction: column; gap: 6px; }
+  .snag-item {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-left: 3px solid var(--warn);
+    border-radius: var(--radius);
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    position: relative;
+  }
+  .snag-item.snag-resolved { border-left-color: var(--ok); opacity: 0.7; }
+  .snag-item.snag-minor { border-left-color: #f59e0b; }
+  .snag-meta { display: flex; align-items: center; gap: 8px; font-size: 10px; color: var(--muted); }
+  .snag-notes { font-size: 11px; color: var(--text); }
+  .snag-delete { position: absolute; top: 6px; right: 6px; background: none; border: none; cursor: pointer; color: var(--muted); font-size: 12px; padding: 2px 4px; border-radius: 3px; }
+  .snag-delete:hover { background: #fee2e2; color: var(--warn); }
+  .snag-add-form {
+    background: #fffbeb;
+    border: 1px dashed #fcd34d;
+    border-radius: var(--radius);
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .snag-severity-pick { display: flex; gap: 6px; }
+  .snag-sev-btn {
+    flex: 1;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 10px;
+    font-weight: 600;
+    border: 1px solid;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.12s;
+  }
+  .snag-sev-btn.sev-critical { border-color: var(--warn); color: var(--warn); background: #fff; }
+  .snag-sev-btn.sev-critical.active { background: var(--warn); color: #fff; }
+  .snag-sev-btn.sev-minor { border-color: #f59e0b; color: #b45309; background: #fff; }
+  .snag-sev-btn.sev-minor.active { background: #f59e0b; color: #fff; }
+  .snag-sev-btn.sev-info { border-color: var(--accent); color: var(--accent); background: #fff; }
+  .snag-sev-btn.sev-info.active { background: var(--accent); color: #fff; }
+
+  /* ── AUDIT LOG ── */
+  .audit-entry {
+    background: #fff;
+    border: 1px solid var(--border-light);
+    border-radius: var(--radius);
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.12s;
+  }
+  .audit-entry:hover { border-color: var(--accent); }
+  .audit-entry-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; }
+  .audit-entry-title { font-family: var(--font-display); font-size: 12px; font-weight: 700; }
+  .audit-entry-time { font-size: 10px; color: var(--muted); }
+  .audit-entry-stats { display: flex; gap: 10px; font-size: 10px; color: var(--muted); }
+  .audit-restore-btn {
+    margin-top: 6px;
+    padding: 3px 10px;
+    font-size: 11px;
+    background: var(--accent);
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-family: var(--font-mono);
+  }
+  .audit-restore-btn:hover { background: #1740b0; }
+  .audit-empty { text-align: center; color: var(--muted); padding: 30px; font-size: 12px; }
+
+  /* ── ITEM COLOUR INDICATOR ── */
+  .item-color-dot {
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-right: 2px;
+    border: 1px solid rgba(0,0,0,0.15);
+  }
+  .snag-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 1px 5px;
+    background: #fee2e2;
+    color: var(--warn);
+    border-radius: 3px;
+    font-size: 9px;
+    font-weight: 700;
+  }
+  .snag-badge.snag-badge-minor { background: #fef3c7; color: #b45309; }
+  .snag-badge.snag-badge-resolved { background: #dcfce7; color: var(--ok); }
 </style>
 </head>
 <body>
@@ -868,6 +1060,7 @@
   <div class="tab" onclick="showTab('meshes')">Meshes</div>
   <div class="tab" onclick="showTab('cages')">Cages</div>
   <div class="tab" onclick="showTab('storage')">Storage Map</div>
+  <div class="tab" onclick="showTab('audit')">📋 Audit Log</div>
 </div>
 
 <div class="main">
@@ -965,6 +1158,45 @@
     <div class="storage-grid" id="storage-grid"></div>
   </div>
 
+  <!-- ── AUDIT LOG ── -->
+  <div id="page-audit" class="page">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+      <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Programme Audit Log</div>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <span style="font-size:11px;color:var(--muted)">Snapshots are stored locally in your browser</span>
+        <button class="btn btn-primary" onclick="saveAuditSnapshot()">📷 Save Snapshot</button>
+        <button class="btn btn-danger btn-sm" onclick="clearAllSnapshots()">Clear All</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:12px;padding:12px 16px;">
+      <div style="font-size:11px;color:var(--muted);line-height:1.6">
+        <strong style="color:var(--text)">How it works:</strong>
+        Save a named snapshot of the current programme at any point. Each snapshot captures all meshes, cages, and their positions.
+        Click a snapshot to preview its contents, or restore it to roll back the programme to that state.
+      </div>
+    </div>
+    <div id="audit-list" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+</div>
+
+<!-- ── ITEM DETAIL PANEL ── -->
+<div id="detail-panel-overlay" class="detail-panel-overlay" onclick="closeDetailPanel(event)">
+  <div class="detail-panel" onclick="event.stopPropagation()">
+    <div class="detail-panel-header">
+      <div id="dp-type-badge" class="badge" style="font-size:10px">MESH</div>
+      <div class="detail-panel-title" id="dp-title">Item Details</div>
+      <button class="btn btn-secondary btn-sm btn-icon" onclick="closeDetailPanelDirect()">✕</button>
+    </div>
+    <div class="detail-panel-body" id="dp-body">
+      <!-- populated by JS -->
+    </div>
+    <div class="detail-panel-footer">
+      <button class="btn btn-danger btn-sm" id="dp-delete-btn">Delete</button>
+      <button class="btn btn-secondary" onclick="closeDetailPanelDirect()">Cancel</button>
+      <button class="btn btn-primary" id="dp-save-btn">Save Changes</button>
+    </div>
+  </div>
 </div>
 
 <!-- ── MESH MODAL ── -->
@@ -1178,6 +1410,71 @@ let editMeshId = null;
 let editCageId = null;
 let selectedMeshIds = [];
 
+// ── ITEM COLOUR PALETTES ──────────────────────────────────
+// Per-area sequences: items within the same area cycle through these shades
+// so adjacent items are visually distinct even with the same base hue.
+const ITEM_PALETTES = {
+  M1: ['#059669','#10b981','#34d399','#065f46','#047857'],
+  M2: ['#65a30d','#84cc16','#a3e635','#3f6212','#4d7c0f'],
+  M3: ['#0284c7','#0ea5e9','#38bdf8','#075985','#0369a1'],
+  M4: ['#6d28d9','#7c3aed','#8b5cf6','#4c1d95','#5b21b6'],
+  M5: ['#be185d','#db2777','#ec4899','#831843','#9d174d'],
+  VST110: ['#db2777','#ec4899','#f472b6','#9d174d','#be185d'],
+  VST120: ['#7c3aed','#8b5cf6','#a78bfa','#4c1d95','#6d28d9'],
+  VST130: ['#1d4ed8','#2563eb','#3b82f6','#1e3a8a','#1e40af'],
+  VST140: ['#c2410c','#ea580c','#f97316','#7c2d12','#9a3412'],
+};
+
+function itemColor(area, indexInArea) {
+  const palette = ITEM_PALETTES[area] || ['#6b7280'];
+  return palette[indexInArea % palette.length];
+}
+
+// ── DETAIL PANEL STATE ────────────────────────────────────
+let detailPanel = { id: null, type: null }; // type: 'mesh' | 'cage'
+let detailSnags = []; // snags for the currently open item
+
+// ── SNAGS LOCAL STORAGE ──────────────────────────────────
+// Snags stored as: { id, itemId, itemType, severity, notes, time_logged, resolved }
+function loadSnags() {
+  return JSON.parse(localStorage.getItem('cagetrack-snags') || '[]');
+}
+function saveSnags(snags) {
+  localStorage.setItem('cagetrack-snags', JSON.stringify(snags));
+}
+function getSnags(itemId) {
+  return loadSnags().filter(s => s.itemId === itemId);
+}
+function addSnag(itemId, itemType, severity, notes) {
+  const all = loadSnags();
+  const snag = {
+    id: 'snag_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
+    itemId, itemType, severity, notes,
+    time_logged: new Date().toISOString(),
+    resolved: false,
+  };
+  all.push(snag);
+  saveSnags(all);
+  return snag;
+}
+function toggleSnagResolved(snagId) {
+  const all = loadSnags();
+  const s = all.find(x=>x.id===snagId);
+  if (s) s.resolved = !s.resolved;
+  saveSnags(all);
+}
+function deleteSnag(snagId) {
+  saveSnags(loadSnags().filter(s=>s.id!==snagId));
+}
+
+// ── AUDIT / SNAPSHOTS ────────────────────────────────────
+function loadSnapshots() {
+  return JSON.parse(localStorage.getItem('cagetrack-snapshots') || '[]');
+}
+function saveSnapshots(snaps) {
+  localStorage.setItem('cagetrack-snapshots', JSON.stringify(snaps));
+}
+
 // ── WORK SCHEDULE ──────────────────────────────────────
 // offDays: Set of 'YYYY-MM-DD' strings that are NOT worked.
 // Sundays (dow=0) are always skipped regardless.
@@ -1312,13 +1609,14 @@ function showToast(msg, type = 'success') {
 // ═══════════════════════════════════════════════════════
 function showTab(name) {
   document.querySelectorAll('.tab').forEach((t, i) => {
-    const names = ['dashboard','programme','meshes','cages','storage'];
+    const names = ['dashboard','programme','meshes','cages','storage','audit'];
     t.classList.toggle('active', names[i] === name);
   });
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.getElementById('page-' + name).classList.add('active');
   if (name === 'programme') renderGantt();
   if (name === 'storage') renderStorage();
+  if (name === 'audit') renderAuditLog();
 }
 
 // ═══════════════════════════════════════════════════════
@@ -2712,11 +3010,27 @@ function renderGantt() {
         const doneCls = isDone ? 'done-shade' : '';
         const label   = isStartR ? item.name : '';
         const itype   = col.type === 'mesh' ? 'meshes' : 'cages';
-        pills += `<div class="sg-pill ${spanCls} ${doneCls}" style="background:${col.color}"
+
+        // Per-item colour: use item's index within its area queue
+        const areaQueue = col.type === 'mesh'
+          ? meshes.filter(m => m.area === col.area && m.start_shift != null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0))
+          : cages.filter(c => c.vst_area === col.area && c.start_shift != null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+        const itemIdx = areaQueue.findIndex(x => x.id === item.id);
+        const pillColor = itemColor(col.area, itemIdx >= 0 ? itemIdx : 0);
+
+        // Snag indicator
+        const itemSnags = getSnags(item.id);
+        const openSnags = itemSnags.filter(s=>!s.resolved);
+        const snagDotHtml = openSnags.length > 0
+          ? `<span style="position:absolute;top:2px;right:3px;width:7px;height:7px;border-radius:50%;background:#fcd34d;border:1px solid rgba(0,0,0,0.2);display:block" title="${openSnags.length} open snag(s)"></span>`
+          : '';
+
+        pills += `<div class="sg-pill ${spanCls} ${doneCls}" style="background:${pillColor};cursor:pointer"
           draggable="true"
-          title="${item.name} — shift ${itemStart}→${itemEnd} — ${Math.round(item.shifts_completed/item.shifts_required*100)||0}% done"
+          title="${item.name} — shift ${itemStart}\u2192${itemEnd} — ${Math.round(item.shifts_completed/item.shifts_required*100)||0}% done${openSnags.length?' · \u26a0 '+openSnags.length+' snag(s)':''}"
           ondragstart="onGanttPillDragStart(event,'${item.id}','${col.area}','${itype}')"
-          ondragend="onGanttPillDragEnd(event,'${item.id}')">${label}</div>`;
+          ondragend="onGanttPillDragEnd(event,'${item.id}')"
+          onclick="openDetailPanel('${item.id}','${itype === 'meshes' ? 'mesh' : 'cage'}',event)">${label}${snagDotHtml}</div>`;
       });
 
       dataRows += `<div class="${cellCls}" style="grid-column:${gridCol};grid-row:${gridRow}"
@@ -2745,6 +3059,438 @@ function renderGantt() {
 // Keep stubs so nothing else breaks
 function ganttBarHTML() { return ''; }
 function ganttGridCells() { return ''; }
+
+// ═══════════════════════════════════════════════════════
+// DETAIL PANEL
+// ═══════════════════════════════════════════════════════
+
+function openDetailPanel(id, type, event) {
+  if (event) { event.stopPropagation(); event.preventDefault(); }
+  detailPanel = { id, type };
+  detailSnags = getSnags(id);
+
+  const item = type === 'mesh' ? meshes.find(m=>m.id===id) : cages.find(c=>c.id===id);
+  if (!item) return;
+
+  const area = type === 'mesh' ? item.area : item.vst_area;
+  const areaQueue = type === 'mesh'
+    ? meshes.filter(m=>m.area===area && m.start_shift!=null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0))
+    : cages.filter(c=>c.vst_area===area && c.start_shift!=null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  const itemIdx = areaQueue.findIndex(x=>x.id===id);
+  const color = itemColor(area, itemIdx>=0?itemIdx:0);
+
+  document.getElementById('dp-title').textContent = item.name;
+  const badge = document.getElementById('dp-type-badge');
+  badge.textContent = type.toUpperCase();
+  badge.style.background = color;
+  badge.style.color = '#fff';
+  badge.style.border = 'none';
+
+  document.getElementById('dp-save-btn').onclick = () => saveDetailPanel();
+  document.getElementById('dp-delete-btn').onclick = () => deleteDetailItem();
+
+  renderDetailPanelBody(item, type, color);
+  document.getElementById('detail-panel-overlay').classList.add('open');
+}
+
+function closeDetailPanel(e) {
+  if (e && e.target !== document.getElementById('detail-panel-overlay')) return;
+  closeDetailPanelDirect();
+}
+function closeDetailPanelDirect() {
+  document.getElementById('detail-panel-overlay').classList.remove('open');
+  detailPanel = { id: null, type: null };
+  detailSnags = [];
+}
+
+function renderDetailPanelBody(item, type, color) {
+  const snags = getSnags(item.id);
+  const openSnags = snags.filter(s=>!s.resolved).length;
+  const area = type === 'mesh' ? item.area : item.vst_area;
+  const pct = item.shifts_required > 0 ? Math.round(item.shifts_completed/item.shifts_required*100) : 0;
+
+  let meshSection = '';
+  if (type === 'cage') {
+    const assigned = (item.meshes||[]).map(m=>`<span class="area-pill area-${m.area}" style="font-size:10px">${m.name}</span>`).join(' ') || '<span style="color:var(--muted);font-size:11px">None assigned</span>';
+    meshSection = `<div class="dp-section">
+      <div class="dp-section-title">Assigned Meshes</div>
+      <div style="display:flex;flex-wrap:wrap;gap:5px">${assigned}</div>
+    </div>`;
+  }
+
+  const statusOptions = type === 'mesh'
+    ? ['planned','in_progress','stored','married','used'].map(s=>`<option value="${s}"${s===item.status?' selected':''}>${s.replace('_',' ')}</option>`).join('')
+    : ['planned','in_progress','complete'].map(s=>`<option value="${s}"${s===item.status?' selected':''}>${s.replace('_',' ')}</option>`).join('');
+
+  const storageSection = type === 'mesh' ? `
+    <div class="dp-field">
+      <div class="dp-label">Storage Area</div>
+      <select class="dp-input" id="dp-storage">
+        <option value="">None</option>
+        ${Array.from({length:15},(_,i)=>`<option value="S${i+1}"${item.storage_area===`S${i+1}`?' selected':''}>S${i+1}</option>`).join('')}
+      </select>
+    </div>` : '';
+
+  const snagItems = snags.map(s => {
+    const sev = s.severity || 'critical';
+    const clsMap = { critical:'', minor:' snag-minor', info:' snag-info' };
+    const resolvedCls = s.resolved ? ' snag-resolved' : '';
+    const d = new Date(s.time_logged);
+    const timeStr = d.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'}) + ' ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    return `<div class="snag-item${clsMap[sev]||''}${resolvedCls}" id="snag-${s.id}">
+      <button class="snag-delete" title="Delete snag" onclick="onDeleteSnag('${s.id}')">✕</button>
+      <div class="snag-meta">
+        <span class="snag-badge${sev==='minor'?' snag-badge-minor':sev==='info'?' snag-badge-minor':''}">⚠ ${sev.toUpperCase()}</span>
+        <span>${timeStr}</span>
+        <span style="margin-left:auto;cursor:pointer;color:var(--ok);font-size:10px" onclick="onToggleSnag('${s.id}')">${s.resolved?'✓ resolved':'Mark resolved'}</span>
+      </div>
+      <div class="snag-notes">${s.notes||'(no notes)'}</div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('dp-body').innerHTML = `
+    <!-- Progress bar -->
+    <div style="display:flex;align-items:center;gap:10px;padding:4px 0">
+      <div class="progress-bar" style="flex:1;height:8px">
+        <div class="progress-fill ${pct>=100?'ok':''}" style="width:${pct}%;background:${color}"></div>
+      </div>
+      <span style="font-size:12px;font-weight:600;color:${color}">${pct}% complete</span>
+    </div>
+
+    <!-- Core fields -->
+    <div class="dp-section">
+      <div class="dp-section-title">Details</div>
+      <div class="dp-row">
+        <div class="dp-field">
+          <div class="dp-label">Name</div>
+          <input class="dp-input" id="dp-name" value="${item.name}">
+        </div>
+        <div class="dp-field">
+          <div class="dp-label">${type==='mesh'?'Area':'VST Bay'}</div>
+          <select class="dp-input" id="dp-area">
+            ${type==='mesh'
+              ? ['M1','M2','M3','M4','M5'].map(a=>`<option value="${a}"${a===area?' selected':''}>${a}</option>`).join('')
+              : ['VST110','VST120','VST130','VST140'].map(a=>`<option value="${a}"${a===area?' selected':''}>${a}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="dp-row">
+        <div class="dp-field">
+          <div class="dp-label">Shifts Required</div>
+          <input class="dp-input" id="dp-shifts-req" type="number" step="0.5" min="0.5" value="${item.shifts_required}">
+        </div>
+        <div class="dp-field">
+          <div class="dp-label">Shifts Completed</div>
+          <input class="dp-input" id="dp-shifts-done" type="number" step="0.5" min="0" value="${item.shifts_completed}">
+        </div>
+      </div>
+      <div class="dp-row">
+        <div class="dp-field">
+          <div class="dp-label">Status</div>
+          <select class="dp-input" id="dp-status">${statusOptions}</select>
+        </div>
+        <div class="dp-field">
+          <div class="dp-label">Start Shift</div>
+          <input class="dp-input" id="dp-start" type="number" min="1" value="${item.start_shift||''}">
+        </div>
+      </div>
+      ${storageSection}
+      <div class="dp-field">
+        <div class="dp-label">Notes</div>
+        <textarea class="dp-input" id="dp-notes" rows="2" style="resize:vertical">${item.notes||''}</textarea>
+      </div>
+    </div>
+
+    ${meshSection}
+
+    <!-- SNAGS -->
+    <div class="dp-section">
+      <div class="dp-section-title">
+        <span>Snags ${openSnags>0?`<span class="snag-badge" style="margin-left:6px">${openSnags} open</span>`:''}</span>
+        <button class="btn btn-sm btn-secondary" onclick="toggleAddSnagForm()">+ Add Snag</button>
+      </div>
+      <div class="snag-list" id="dp-snag-list">${snagItems||'<div style="color:var(--muted);font-size:11px;padding:4px 0">No snags recorded ✓</div>'}</div>
+      <div id="dp-snag-form" class="snag-add-form" style="display:none;margin-top:8px">
+        <div class="dp-label" style="margin-bottom:4px">Severity</div>
+        <div class="snag-severity-pick">
+          <div class="snag-sev-btn sev-critical active" id="snag-sev-critical" onclick="selectSnagSev('critical')">🔴 Critical</div>
+          <div class="snag-sev-btn sev-minor" id="snag-sev-minor" onclick="selectSnagSev('minor')">🟡 Minor</div>
+          <div class="snag-sev-btn sev-info" id="snag-sev-info" onclick="selectSnagSev('info')">🔵 Info</div>
+        </div>
+        <div class="dp-label" style="margin-top:6px;margin-bottom:4px">Notes</div>
+        <textarea class="dp-input" id="dp-snag-notes" rows="2" placeholder="Describe the snag..." style="resize:vertical;background:#fff"></textarea>
+        <div style="display:flex;gap:6px;margin-top:6px">
+          <button class="btn btn-primary btn-sm" onclick="submitSnag()">Log Snag</button>
+          <button class="btn btn-secondary btn-sm" onclick="toggleAddSnagForm()">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+let selectedSnagSev = 'critical';
+function selectSnagSev(sev) {
+  selectedSnagSev = sev;
+  ['critical','minor','info'].forEach(s => {
+    const el = document.getElementById('snag-sev-' + s);
+    if (el) el.classList.toggle('active', s === sev);
+  });
+}
+
+function toggleAddSnagForm() {
+  const form = document.getElementById('dp-snag-form');
+  if (!form) return;
+  form.style.display = form.style.display === 'none' ? 'block' : 'none';
+  selectedSnagSev = 'critical';
+  selectSnagSev('critical');
+}
+
+function submitSnag() {
+  const notes = document.getElementById('dp-snag-notes')?.value?.trim();
+  if (!notes) { showToast('Add a note for the snag', 'error'); return; }
+  addSnag(detailPanel.id, detailPanel.type, selectedSnagSev, notes);
+  // Re-render snag list
+  const item = detailPanel.type === 'mesh' ? meshes.find(m=>m.id===detailPanel.id) : cages.find(c=>c.id===detailPanel.id);
+  if (item) {
+    const area = detailPanel.type === 'mesh' ? item.area : item.vst_area;
+    const areaQueue = detailPanel.type === 'mesh'
+      ? meshes.filter(m=>m.area===area && m.start_shift!=null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0))
+      : cages.filter(c=>c.vst_area===area && c.start_shift!=null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+    const idx = areaQueue.findIndex(x=>x.id===detailPanel.id);
+    const color = itemColor(area, idx>=0?idx:0);
+    renderDetailPanelBody(item, detailPanel.type, color);
+  }
+  showToast('Snag logged ⚠');
+  if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
+}
+
+function onDeleteSnag(snagId) {
+  deleteSnag(snagId);
+  const el = document.getElementById('snag-' + snagId);
+  if (el) el.remove();
+  if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
+}
+
+function onToggleSnag(snagId) {
+  toggleSnagResolved(snagId);
+  const item = detailPanel.type === 'mesh' ? meshes.find(m=>m.id===detailPanel.id) : cages.find(c=>c.id===detailPanel.id);
+  if (item) {
+    const area = detailPanel.type === 'mesh' ? item.area : item.vst_area;
+    const q = detailPanel.type === 'mesh'
+      ? meshes.filter(m=>m.area===area && m.start_shift!=null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0))
+      : cages.filter(c=>c.vst_area===area && c.start_shift!=null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+    const idx = q.findIndex(x=>x.id===detailPanel.id);
+    renderDetailPanelBody(item, detailPanel.type, itemColor(area, idx>=0?idx:0));
+  }
+  if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
+}
+
+async function saveDetailPanel() {
+  const { id, type } = detailPanel;
+  if (!id) return;
+  const name        = document.getElementById('dp-name')?.value?.trim();
+  const area        = document.getElementById('dp-area')?.value;
+  const shiftsReq   = parseFloat(document.getElementById('dp-shifts-req')?.value);
+  const shiftsDone  = parseFloat(document.getElementById('dp-shifts-done')?.value);
+  const status      = document.getElementById('dp-status')?.value;
+  const startShift  = parseInt(document.getElementById('dp-start')?.value) || null;
+  const notes       = document.getElementById('dp-notes')?.value || null;
+
+  if (!name) { showToast('Name required', 'error'); return; }
+
+  try {
+    if (type === 'mesh') {
+      const storage_area = document.getElementById('dp-storage')?.value || null;
+      const oldItem = meshes.find(m=>m.id===id);
+      let data = { name, area, shifts_required: shiftsReq, shifts_completed: shiftsDone, status, start_shift: startShift, notes, storage_area };
+      const updated = await api(`/api/meshes/${id}`, 'PUT', data);
+      meshes = meshes.map(m=>m.id===id?updated:m);
+      // Handle area change
+      if (oldItem && oldItem.area !== area) await moveItemToArea(id, area, 'meshes');
+      else if (oldItem && oldItem.start_shift && shiftsReq !== oldItem.shifts_required) {
+        await pushAfterResize(id, startShift||oldItem.start_shift, shiftsReq, area, 'meshes');
+      }
+    } else {
+      const oldItem = cages.find(c=>c.id===id);
+      const data = { name, vst_area: area, shifts_required: shiftsReq, shifts_completed: shiftsDone, status, start_shift: startShift, notes };
+      const updated = await api(`/api/cages/${id}`, 'PUT', data);
+      cages = cages.map(c=>c.id===id?{...updated,meshes:c.meshes}:c);
+      if (oldItem && oldItem.vst_area !== area) await moveItemToArea(id, area, 'cages');
+      else if (oldItem && oldItem.start_shift && shiftsReq !== oldItem.shifts_required) {
+        await pushAfterResize(id, startShift||oldItem.start_shift, shiftsReq, area, 'cages');
+      }
+    }
+    closeDetailPanelDirect();
+    renderAll();
+    showToast('Saved ✓');
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+async function deleteDetailItem() {
+  const { id, type } = detailPanel;
+  if (!id) return;
+  if (!confirm(`Delete this ${type}?`)) return;
+  try {
+    if (type === 'mesh') {
+      const m = meshes.find(x=>x.id===id);
+      await api(`/api/meshes/${id}`, 'DELETE');
+      meshes = meshes.filter(x=>x.id!==id);
+      if (m?.area && m?.start_shift) await closeGapAfterRemoval(m, m.area, 'meshes');
+    } else {
+      const c = cages.find(x=>x.id===id);
+      await api(`/api/cages/${id}`, 'DELETE');
+      cages = cages.filter(x=>x.id!==id);
+      if (c?.vst_area && c?.start_shift) await closeGapAfterRemoval(c, c.vst_area, 'cages');
+    }
+    closeDetailPanelDirect();
+    renderAll();
+    showToast(`${type} deleted`);
+  } catch(e) { showToast(e.message, 'error'); }
+}
+
+// ═══════════════════════════════════════════════════════
+// AUDIT LOG / SNAPSHOTS
+// ═══════════════════════════════════════════════════════
+
+async function saveAuditSnapshot() {
+  const label = prompt('Snapshot name / note (e.g. "End of week 3"):');
+  if (!label) return;
+  const snaps = loadSnapshots();
+  const snap = {
+    id: 'snap_' + Date.now(),
+    label,
+    timestamp: new Date().toISOString(),
+    programme: JSON.parse(JSON.stringify(programme)),
+    meshes: JSON.parse(JSON.stringify(meshes)),
+    cages: JSON.parse(JSON.stringify(cages)),
+    snags: loadSnags(),
+  };
+  snaps.unshift(snap);
+  // Keep max 30 snapshots
+  if (snaps.length > 30) snaps.length = 30;
+  saveSnapshots(snaps);
+  renderAuditLog();
+  showToast('Snapshot saved 📷');
+}
+
+function renderAuditLog() {
+  const container = document.getElementById('audit-list');
+  if (!container) return;
+  const snaps = loadSnapshots();
+  if (!snaps.length) {
+    container.innerHTML = `<div class="audit-empty card">No snapshots yet.<br><br>Click <strong>Save Snapshot</strong> to capture the current programme state at any point in time.</div>`;
+    return;
+  }
+  container.innerHTML = snaps.map(snap => {
+    const d = new Date(snap.timestamp);
+    const timeStr = d.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'long',year:'numeric'}) + ' at ' + d.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'});
+    const meshCount = (snap.meshes||[]).length;
+    const cageCount = (snap.cages||[]).length;
+    const snagCount = (snap.snags||[]).length;
+    const inProgress = (snap.meshes||[]).filter(m=>m.status==='in_progress').length + (snap.cages||[]).filter(c=>c.status==='in_progress').length;
+    return `<div class="audit-entry card">
+      <div class="audit-entry-header">
+        <div class="audit-entry-title">📷 ${snap.label}</div>
+        <div class="audit-entry-time">${timeStr}</div>
+      </div>
+      <div class="audit-entry-stats">
+        <span>🔩 ${meshCount} mesh${meshCount!==1?'es':''}</span>
+        <span>⬡ ${cageCount} cage${cageCount!==1?'s':''}</span>
+        <span>⚡ ${inProgress} in progress</span>
+        ${snagCount?`<span>⚠ ${snagCount} snag${snagCount!==1?'s':''}</span>`:''}
+        <span>Plan: ${snap.programme?.plan_start_date||'—'}</span>
+      </div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="audit-restore-btn" onclick="restoreSnapshot('${snap.id}')">↩ Restore</button>
+        <button class="audit-restore-btn" style="background:#6b7280" onclick="previewSnapshot('${snap.id}')">👁 Preview</button>
+        <button class="audit-restore-btn" style="background:var(--warn)" onclick="deleteSnapshot('${snap.id}')">✕ Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function deleteSnapshot(snapId) {
+  if (!confirm('Delete this snapshot?')) return;
+  saveSnapshots(loadSnapshots().filter(s=>s.id!==snapId));
+  renderAuditLog();
+  showToast('Snapshot deleted');
+}
+
+function previewSnapshot(snapId) {
+  const snap = loadSnapshots().find(s=>s.id===snapId);
+  if (!snap) return;
+  const d = new Date(snap.timestamp);
+  const info = [
+    `Snapshot: "${snap.label}"`,
+    `Saved: ${d.toLocaleString('en-GB')}`,
+    ``,
+    `Meshes (${snap.meshes.length}):`,
+    ...(snap.meshes.map(m => `  • ${m.name} [${m.area}] shift ${m.start_shift||'unscheduled'} — ${m.status}`)),
+    ``,
+    `Cages (${snap.cages.length}):`,
+    ...(snap.cages.map(c => `  • ${c.name} [${c.vst_area}] shift ${c.start_shift||'unscheduled'} — ${c.status}`)),
+    ``,
+    `Snags (${(snap.snags||[]).length}):`,
+    ...((snap.snags||[]).map(s => `  • [${s.severity}] ${s.notes} — ${s.resolved?'resolved':'open'}`)),
+  ].join('\n');
+  alert(info);
+}
+
+async function restoreSnapshot(snapId) {
+  const snap = loadSnapshots().find(s=>s.id===snapId);
+  if (!snap) return;
+  if (!confirm(`Restore "${snap.label}"?\n\nThis will overwrite ALL current meshes and cages in the database. This cannot be undone (but you can save a snapshot of the current state first).`)) return;
+
+  // Save a backup snapshot first
+  const backupSnaps = loadSnapshots();
+  backupSnaps.unshift({
+    id: 'snap_backup_' + Date.now(),
+    label: 'Auto-backup before restore of "' + snap.label + '"',
+    timestamp: new Date().toISOString(),
+    programme: JSON.parse(JSON.stringify(programme)),
+    meshes: JSON.parse(JSON.stringify(meshes)),
+    cages: JSON.parse(JSON.stringify(cages)),
+    snags: loadSnags(),
+  });
+  if (backupSnaps.length > 30) backupSnaps.length = 30;
+  saveSnapshots(backupSnaps);
+
+  // Delete all current cages and meshes
+  try {
+    for (const c of cages) await api(`/api/cages/${c.id}`, 'DELETE');
+    for (const m of meshes) await api(`/api/meshes/${m.id}`, 'DELETE');
+
+    // Re-create from snapshot
+    for (const m of snap.meshes) {
+      await api('/api/meshes', 'POST', m);
+      await api(`/api/meshes/${m.id}`, 'PUT', m);
+    }
+    for (const c of snap.cages) {
+      await api('/api/cages', 'POST', c);
+      await api(`/api/cages/${c.id}`, 'PUT', c);
+    }
+
+    // Restore snags
+    if (snap.snags) saveSnags(snap.snags);
+
+    // Restore programme
+    if (snap.programme) {
+      await api('/api/programme', 'POST', snap.programme);
+      programme = snap.programme;
+    }
+
+    await refreshAll();
+    renderAuditLog();
+    showToast('Programme restored from snapshot ✓');
+  } catch(e) { showToast('Restore error: ' + e.message, 'error'); }
+}
+
+function clearAllSnapshots() {
+  if (!confirm('Delete ALL snapshots? This cannot be undone.')) return;
+  saveSnapshots([]);
+  renderAuditLog();
+  showToast('All snapshots cleared');
+}
 
 // ═══════════════════════════════════════════════════════
 // SETTINGS
