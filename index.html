@@ -776,6 +776,72 @@
     outline-offset: -2px;
   }
 
+
+  /* ── WORK SCHEDULE BAR ── */
+  .schedule-bar {
+    display: flex;
+    align-items: flex-start;
+    gap: 0;
+    padding: 10px 0 10px 0;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+  }
+  .schedule-week {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-right: 6px;
+    flex-shrink: 0;
+  }
+  .schedule-week-label {
+    font-size: 9px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    text-align: center;
+    padding-bottom: 2px;
+  }
+  .schedule-days {
+    display: flex;
+    gap: 2px;
+  }
+  .sched-day {
+    width: 36px;
+    height: 44px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.12s;
+    background: #fff;
+    gap: 2px;
+  }
+  .sched-day .sd-dow { font-size: 9px; font-weight: 700; color: var(--muted); text-transform: uppercase; }
+  .sched-day .sd-date { font-size: 11px; font-weight: 700; color: var(--text); }
+  .sched-day.is-on { background: #dcfce7; border-color: #16a34a; }
+  .sched-day.is-on .sd-dow { color: #15803d; }
+  .sched-day.is-on .sd-date { color: #15803d; }
+  .sched-day.is-off { background: #f1f5f9; border-color: #cbd5e1; opacity: 0.7; }
+  .sched-day.is-off .sd-dow { color: #94a3b8; }
+  .sched-day.is-off .sd-date { color: #94a3b8; text-decoration: line-through; }
+  .sched-day.is-sunday { background: #f8fafc; border-color: #e2e8f0; cursor: not-allowed; opacity: 0.4; }
+  .sched-day.is-sunday .sd-dow { color: #cbd5e1; }
+  .sched-day.is-sunday .sd-date { color: #cbd5e1; }
+  .sched-day:not(.is-sunday):hover { border-color: var(--accent); transform: scale(1.05); }
+
+  /* Off-day row in gantt */
+  .sg-time.off-day-label { background: #f1f5f9; opacity: 0.55; }
+  .sg-data.off-day-cell { background: #f8fafc !important; opacity: 0.4; pointer-events: none; }
+  .sg-time.sunday-label { background: #f1f5f9; opacity: 0.35; }
+  .sg-data.sunday-cell { background: #f1f5f9 !important; opacity: 0.25; pointer-events: none; }
+  /* Thicker top border when a new working day starts in gantt */
+  .sg-time.workday-first { border-top: 2px solid #94a3b8; }
+  .sg-data.workday-first { border-top: 2px solid #e2e8f0; }
+
 </style>
 </head>
 <body>
@@ -843,15 +909,24 @@
 
   <!-- ── PROGRAMME (GANTT) ── -->
   <div id="page-programme" class="page">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;flex-wrap:wrap;gap:8px;">
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Production Programme — Gantt View</div>
       <div style="display:flex;gap:8px;align-items:center;">
         <div style="display:flex;gap:12px;font-size:11px;color:var(--muted);align-items:center;">
           <span><span style="display:inline-block;width:12px;height:12px;background:var(--mesh-color);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Mesh</span>
           <span><span style="display:inline-block;width:12px;height:12px;background:var(--cage-color);border-radius:2px;vertical-align:middle;margin-right:4px;"></span>Cage</span>
+          <span style="color:var(--muted)">· Click days to toggle on/off · Sun always off</span>
         </div>
         <button class="btn btn-secondary btn-sm" onclick="refreshAll()">↻ Refresh</button>
       </div>
+    </div>
+    <!-- Work schedule toggles -->
+    <div class="card" style="padding:8px 12px;margin-bottom:10px;">
+      <div style="font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:6px;">
+        Working Days — click to toggle &nbsp;
+        <span style="font-weight:400;color:var(--muted)">🟢 working &nbsp; ⬜ off &nbsp; 🔒 Sun (always off)</span>
+      </div>
+      <div id="schedule-bar" class="schedule-bar"></div>
     </div>
     <div id="gantt-container">
       <div id="gantt-inner" class="gantt-wrap"></div>
@@ -1102,6 +1177,116 @@ let cages = [];
 let editMeshId = null;
 let editCageId = null;
 let selectedMeshIds = [];
+
+// ── WORK SCHEDULE ──────────────────────────────────────
+// offDays: Set of 'YYYY-MM-DD' strings that are NOT worked.
+// Sundays (dow=0) are always skipped regardless.
+// Saturday (dow=6) can be toggled.
+let offDays = new Set(JSON.parse(localStorage.getItem('cagetrack-offdays') || '[]'));
+
+function dateKey(d) {
+  return d.toISOString().slice(0, 10);
+}
+
+function isSunday(d) {
+  return d.getDay() === 0;
+}
+
+function isDayWorked(d) {
+  if (isSunday(d)) return false;
+  return !offDays.has(dateKey(d));
+}
+
+function toggleDay(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  if (isSunday(d)) return; // can't toggle Sunday
+  if (offDays.has(dateStr)) offDays.delete(dateStr);
+  else offDays.add(dateStr);
+  localStorage.setItem('cagetrack-offdays', JSON.stringify([...offDays]));
+  renderScheduleBar();
+  renderGantt();
+}
+
+// Build the list of working shifts in order.
+// Returns array of { shiftIdx (0-based position in working sequence), date, dow, shiftInDay, shiftLabel, shiftCls }
+function buildWorkingShifts() {
+  const spd       = parseInt(programme.shifts_per_day) || 3;
+  const weeks     = parseInt(programme.weeks) || 4;
+  const startDate = new Date(programme.plan_start_date || new Date());
+  const shiftDefs = SHIFT_CFG[spd] || SHIFT_CFG[3];
+  const totalDays = weeks * 7;
+
+  const result = [];
+  let shiftCounter = 0; // 1-based shift number (only counts worked shifts)
+
+  for (let d = 0; d < totalDays; d++) {
+    const date = new Date(startDate);
+    date.setDate(startDate.getDate() + d);
+    const worked = isDayWorked(date);
+    const dow    = date.getDay();
+    const isFirst = true; // first shift of this day's row group
+
+    for (let sid = 0; sid < spd; sid++) {
+      const sd = shiftDefs[sid];
+      if (worked) shiftCounter++;
+      result.push({
+        date,
+        dateStr: dateKey(date),
+        dow,
+        shiftInDay: sid,
+        isFirstOfDay: sid === 0,
+        worked,
+        shiftNum: worked ? shiftCounter : null, // null = not a real shift
+        shiftLabel: sd.label,
+        shiftCls: sd.cls,
+      });
+    }
+  }
+  return result;
+}
+
+// Render the work-schedule toggle bar
+function renderScheduleBar() {
+  const bar       = document.getElementById('schedule-bar');
+  if (!bar) return;
+  const weeks     = parseInt(programme.weeks) || 4;
+  const startDate = new Date(programme.plan_start_date || new Date());
+  const totalDays = weeks * 7;
+
+  // Group into weeks
+  let weeksHTML = '';
+  for (let w = 0; w < weeks; w++) {
+    let daysHTML = '';
+    for (let d = 0; d < 7; d++) {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + w * 7 + d);
+      const dk   = dateKey(date);
+      const dow  = date.getDay();
+      const sun  = dow === 0;
+      const worked = isDayWorked(date);
+      const dowLabel = ['Su','Mo','Tu','We','Th','Fr','Sa'][dow];
+      const dateNum  = date.getDate();
+      let cls = 'sched-day';
+      if (sun)    cls += ' is-sunday';
+      else if (worked) cls += ' is-on';
+      else        cls += ' is-off';
+      const onclick = sun ? '' : `onclick="toggleDay('${dk}')"`;
+      const title   = sun ? 'Sundays are always off' : (worked ? 'Click to mark as off' : 'Click to mark as working');
+      daysHTML += `<div class="${cls}" ${onclick} title="${title}">
+        <span class="sd-dow">${dowLabel}</span>
+        <span class="sd-date">${dateNum}</span>
+      </div>`;
+    }
+    const weekStart = new Date(startDate);
+    weekStart.setDate(startDate.getDate() + w * 7);
+    const wLabel = weekStart.toLocaleDateString('en-GB', { day:'numeric', month:'short' });
+    weeksHTML += `<div class="schedule-week">
+      <div class="schedule-week-label">w/c ${wLabel}</div>
+      <div class="schedule-days">${daysHTML}</div>
+    </div>`;
+  }
+  bar.innerHTML = weeksHTML;
+}
 
 // ═══════════════════════════════════════════════════════
 // API HELPERS
@@ -1657,48 +1842,44 @@ function onGanttCellDragLeave(e) {
   e.currentTarget.classList.remove('drop-target','drop-forbidden');
 }
 
-async function onGanttCellDrop(e, dropArea, dropType, dropShiftIdx) {
+async function onGanttCellDrop(e, dropArea, dropType, dropShiftNum) {
+  // dropShiftNum is now a 1-based WORKING shift number (null impossible since off cells don't drop)
   e.preventDefault();
   e.currentTarget.classList.remove('drop-target','drop-forbidden');
   const { id, fromArea, type } = ganttDrag;
   if (!id) return;
 
-  // Wrong type — block
-  if (type !== dropType) {
-    showToast('Cannot mix meshes and cage bays', 'error');
-    return;
-  }
+  if (type !== dropType) { showToast('Cannot mix meshes and cage bays', 'error'); return; }
 
   const isCage = type === 'cages';
 
-  // ── CROSS-AREA: move to a different column ──────────────────────
+  // Helper: get sorted queue for an area
+  function getQueue(area) {
+    if (isCage) return cages.filter(c => c.vst_area === area && c.start_shift != null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+    return meshes.filter(m => m.area === area && m.start_shift != null).sort((a,b)=>(a.start_shift||0)-(b.start_shift||0));
+  }
+
+  // ── CROSS-AREA ───────────────────────────────────────────────────
   if (fromArea !== dropArea) {
     try {
-      await moveItemToArea(id, dropArea, type);
-      // After appending to end of new area, now re-insert at the right
-      // position based on where in the column they dropped
-      const dropShiftNum = dropShiftIdx + 1; // 1-based
-      let queue;
+      // Change area/VST, temporarily clear start_shift
       if (isCage) {
-        queue = cages.filter(c => c.vst_area === dropArea && c.start_shift != null)
-                     .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+        const upd = await api(`/api/cages/${id}`, 'PUT', { vst_area: dropArea, start_shift: null });
+        cages = cages.map(c => c.id===id ? {...upd, meshes:c.meshes} : c);
       } else {
-        queue = meshes.filter(m => m.area === dropArea && m.start_shift != null)
-                      .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
+        const upd = await api(`/api/meshes/${id}`, 'PUT', { area: dropArea, start_shift: null });
+        meshes = meshes.map(m => m.id===id ? upd : m);
       }
-      // Find position: item whose range covers dropShiftNum, or insert before next item
+      await resequenceArea(fromArea, type); // resequence old area
+
+      // Insert at dropShiftNum position in new area
       const draggedItem = isCage ? cages.find(c=>c.id===id) : meshes.find(m=>m.id===id);
-      const otherItems  = queue.filter(x => x.id !== id);
-      // Find which position in otherItems the dropShiftNum falls before
-      let insertIdx = otherItems.length; // default: end
-      for (let i = 0; i < otherItems.length; i++) {
-        if ((otherItems[i].start_shift || 1) > dropShiftNum) {
-          insertIdx = i;
-          break;
-        }
+      const others = getQueue(dropArea).filter(x=>x.id!==id);
+      let insertIdx = others.length;
+      for (let i = 0; i < others.length; i++) {
+        if ((others[i].start_shift||1) > dropShiftNum) { insertIdx = i; break; }
       }
-      // Rebuild queue with dragged item at insertIdx
-      const newOrder = [...otherItems];
+      const newOrder = [...others];
       newOrder.splice(insertIdx, 0, draggedItem);
       const updates = computeSequence(newOrder, 1);
       await saveSequence(updates, type);
@@ -1708,51 +1889,66 @@ async function onGanttCellDrop(e, dropArea, dropType, dropShiftIdx) {
     return;
   }
 
-  // ── SAME AREA: vertical reorder ─────────────────────────────────
-  const dropShiftNum = dropShiftIdx + 1; // 1-based
-
-  let queue;
-  if (isCage) {
-    queue = cages.filter(c => c.vst_area === fromArea && c.start_shift != null)
-                 .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
-  } else {
-    queue = meshes.filter(m => m.area === fromArea && m.start_shift != null)
-                  .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
-  }
-
-  const fromIdx = queue.findIndex(x => x.id === id);
+  // ── SAME AREA ────────────────────────────────────────────────────
+  const queue    = getQueue(fromArea);
+  const fromIdx  = queue.findIndex(x => x.id === id);
   if (fromIdx === -1) return;
 
-  // Which item does the drop target shift belong to?
+  const draggedItem = queue[fromIdx];
+
+  // Is there an item already occupying dropShiftNum?
   const targetItem = queue.find(x => {
-    const s0 = x.start_shift - 1;
-    const s1 = s0 + Math.ceil(x.shifts_required);
-    return dropShiftIdx >= s0 && dropShiftIdx < s1;
+    if (x.id === id) return false;
+    const s0 = x.start_shift;
+    const s1 = s0 + Math.ceil(x.shifts_required) - 1;
+    return dropShiftNum >= s0 && dropShiftNum <= s1;
   });
 
-  let toIdx;
-  if (!targetItem || targetItem.id === id) {
-    // Dropped on empty space or own bar — find nearest item below
-    toIdx = queue.findIndex(x => (x.start_shift - 1) > dropShiftIdx);
-    if (toIdx === -1) toIdx = queue.length - 1;
+  if (targetItem) {
+    // Dropped ON another item — reorder: move dragged before or after target
+    const toIdx  = queue.findIndex(x => x.id === targetItem.id);
+    const newIdx = fromIdx > toIdx ? toIdx : toIdx; // insert at target's position
+    if (fromIdx === newIdx) return;
+    try { await moveItemInQueue(id, newIdx, fromArea, type); showToast('Reordered ✓'); }
+    catch(err) { showToast(err.message,'error'); }
   } else {
-    toIdx = queue.findIndex(x => x.id === targetItem.id);
-    // If dropped on the top half of target, insert before; bottom half, insert after
-    // (simple heuristic: insert before target)
-    if (fromIdx > toIdx) {
-      // moving up — insert before target
+    // ── Dropped on EMPTY space ───────────────────────────────────
+    // Strategy: set dragged item's start_shift to dropShiftNum,
+    // then resequence items that now clash (items after this one start from dropShiftNum + dur)
+    const others = queue.filter(x => x.id !== id);
+    // Split: items that end before dropShiftNum stay put, items that start at/after get pushed
+    const before = others.filter(x => (x.start_shift + Math.ceil(x.shifts_required) - 1) < dropShiftNum);
+    const after  = others.filter(x => x.start_shift >= dropShiftNum);
+    const overlap = others.filter(x =>
+      x.start_shift < dropShiftNum &&
+      (x.start_shift + Math.ceil(x.shifts_required) - 1) >= dropShiftNum
+    );
+
+    // If something overlaps, push it — treat it as "after"
+    const afterAll = [...overlap, ...after];
+
+    // Set dragged item's new start
+    const newStart = dropShiftNum;
+    if (isCage) {
+      const upd = await api(`/api/cages/${id}`, 'PUT', { start_shift: newStart });
+      cages = cages.map(c => c.id===id ? {...upd, meshes:c.meshes} : c);
     } else {
-      // moving down — insert after target
-      toIdx = Math.min(toIdx, queue.length - 1);
+      const upd = await api(`/api/meshes/${id}`, 'PUT', { start_shift: newStart });
+      meshes = meshes.map(m => m.id===id ? upd : m);
     }
+
+    // Resequence the "after" items from newStart + duration of dragged
+    let cursor = newStart + Math.ceil(draggedItem.shifts_required);
+    const updates = afterAll.map(x => {
+      const s = cursor;
+      cursor += Math.ceil(x.shifts_required);
+      return { id: x.id, start_shift: s };
+    });
+    if (updates.length) await saveSequence(updates, type);
+
+    renderAll();
+    showToast('Placed with gap ✓');
   }
-
-  if (fromIdx === toIdx) return;
-
-  try {
-    await moveItemInQueue(id, toIdx, fromArea, type);
-    showToast('Reordered ✓');
-  } catch(err) { showToast(err.message, 'error'); }
 }
 
 function renderGanttIfActive() {
@@ -2271,153 +2467,174 @@ const TIME_W = 100;
 const COL_W = 130;
 
 function renderGantt() {
-  const spd    = parseInt(programme.shifts_per_day) || 3;
-  const weeks  = parseInt(programme.weeks) || 4;
-  const totalDays   = weeks * 7;
-  const totalShifts = totalDays * spd;
-  const startDate   = new Date(programme.plan_start_date || new Date());
   const inner = document.getElementById('gantt-inner');
+  if (!inner) return;
 
-  const shiftDefs = SHIFT_CFG[spd] || SHIFT_CFG[3];
+  const spd = parseInt(programme.shifts_per_day) || 3;
 
   // All fixed columns
   const meshCols = MESH_AREAS.map(a => ({ area: a, type: 'mesh', color: cssVar(AREA_COLORS[a]) }));
   const vstCols  = VST_AREAS.map(a  => ({ area: a, type: 'cage', color: cssVar(AREA_COLORS[a]) }));
-  const allCols  = [...meshCols, ...vstCols]; // 9 data columns total
+  const allCols  = [...meshCols, ...vstCols];
+  const gridCols = `${TIME_W}px ` + allCols.map(() => COL_W + 'px').join(' ');
 
-  const totalCols = 1 + allCols.length; // 1 time col + data cols
-  const gridCols  = `${TIME_W}px ` + allCols.map(() => COL_W + 'px').join(' ');
+  // Build the full row list (worked + off-day rows)
+  const allRows = buildWorkingShifts();
+  const totalRows = allRows.length;
 
-  // Build a lookup: for each (colIdx, shiftIdx) → item occupying it
-  // shiftIdx = 0-based absolute shift number
-  function getItemsForColShift(col, shiftIdx) {
-    // A column can have multiple items (multiple meshes in same area, or mesh marriage area)
-    // For VST: only 1 cage at a time, but show all scheduled
+  // For items: start_shift is 1-based index into WORKING shifts only
+  // We need a lookup: workedShiftNum → row index in allRows
+  const workedRowByShiftNum = {}; // shiftNum (1-based) → row index
+  allRows.forEach((row, ri) => {
+    if (row.shiftNum != null) workedRowByShiftNum[row.shiftNum] = ri;
+  });
+
+  // Items visible in a given worked shift number s1 (1-based)
+  function getItemsForColWorkedShift(col, shiftNum) {
+    if (!shiftNum) return [];
     if (col.type === 'mesh') {
       return meshes.filter(m => {
         if (m.area !== col.area || m.start_shift == null) return false;
-        const s0 = m.start_shift - 1;
-        const s1 = s0 + Math.max(1, m.shifts_required);
-        return shiftIdx >= s0 && shiftIdx < s1;
+        const s0 = m.start_shift;          // 1-based
+        const s1 = s0 + Math.max(1, m.shifts_required) - 1;
+        return shiftNum >= s0 && shiftNum <= s1;
       });
     } else {
       return cages.filter(c => {
         if (c.vst_area !== col.area || c.start_shift == null) return false;
-        const s0 = c.start_shift - 1;
-        const s1 = s0 + Math.max(1, c.shifts_required);
-        return shiftIdx >= s0 && shiftIdx < s1;
+        const s0 = c.start_shift;
+        const s1 = s0 + Math.max(1, c.shifts_required) - 1;
+        return shiftNum >= s0 && shiftNum <= s1;
       });
     }
   }
 
   // ── Group header row ──────────────────────────────────────────
   let grpRow = `<div class="sg-cell sg-grp-hdr date-corner" style="grid-column:1;grid-row:1"></div>`;
-
-  // Mesh areas group header — spans M1-M5
-  grpRow += `<div class="sg-cell sg-grp-hdr mesh-grp" style="grid-column:2/${2+meshCols.length};grid-row:1">
-    🔩 Mesh Production Areas
-  </div>`;
-  // VST group header — spans VST110-140
-  grpRow += `<div class="sg-cell sg-grp-hdr vst-grp" style="grid-column:${2+meshCols.length}/${2+meshCols.length+vstCols.length+1};grid-row:1">
-    ⬡ VST Build Bays
-  </div>`;
+  grpRow += `<div class="sg-cell sg-grp-hdr mesh-grp" style="grid-column:2/${2+meshCols.length};grid-row:1">🔩 Mesh Production Areas</div>`;
+  grpRow += `<div class="sg-cell sg-grp-hdr vst-grp" style="grid-column:${2+meshCols.length}/${2+meshCols.length+vstCols.length+1};grid-row:1">⬡ VST Build Bays</div>`;
 
   // ── Column header row ─────────────────────────────────────────
   let colRow = `<div class="sg-cell sg-col-hdr" style="grid-column:1;grid-row:2;left:0;z-index:25;background:#f1f5f9">
     <span class="ch-area" style="color:var(--muted)">Date / Shift</span>
   </div>`;
-
   allCols.forEach((col, ci) => {
-    const isVST = col.type === 'cage';
     const gridCol = ci + 2;
-    // Count items in this area
-    const items = isVST
+    const items = col.type === 'cage'
       ? cages.filter(c => c.vst_area === col.area && c.start_shift != null)
       : meshes.filter(m => m.area === col.area && m.start_shift != null);
-    const sub = items.length > 0 ? `${items.length} item${items.length>1?'s':''}` : 'empty';
+    const sub = items.length ? `${items.length} item${items.length>1?'s':''}` : 'empty';
     colRow += `<div class="sg-cell sg-col-hdr col-${col.area}" style="grid-column:${gridCol};grid-row:2">
       <span class="ch-area" style="color:${col.color}">${col.area}</span>
       <span class="ch-item">${sub}</span>
     </div>`;
   });
 
-  // ── Data rows (one per shift) ─────────────────────────────────
+  // ── Data rows ─────────────────────────────────────────────────
   let dataRows = '';
-  for (let s = 0; s < totalShifts; s++) {
-    const dayIdx      = Math.floor(s / spd);
-    const shiftInDay  = s % spd;
-    const date        = new Date(startDate);
-    date.setDate(startDate.getDate() + dayIdx);
-    const dow         = date.getDay();
-    const isWeekend   = dow === 0 || dow === 6;
-    const isDayFirst  = shiftInDay === 0;
-    const gridRow     = s + 3; // rows 1 & 2 are headers
+  for (let ri = 0; ri < totalRows; ri++) {
+    const row      = allRows[ri];
+    const gridRow  = ri + 3;
+    const worked   = row.worked;
+    const isSun    = row.dow === 0;
+    const isSat    = row.dow === 6;
+    const isFirst  = row.isFirstOfDay;
 
-    const sd = shiftDefs[shiftInDay];
-    const dateStr = isDayFirst
-      ? date.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
+    // Time label classes
+    let timeCls = 'sg-cell sg-time';
+    if (isFirst)  timeCls += ' workday-first';
+    if (!worked && isSun)  timeCls += ' sunday-label';
+    else if (!worked)      timeCls += ' off-day-label';
+
+    // Date display — show on first shift of day
+    const dateStr = isFirst
+      ? row.date.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' })
       : '';
 
-    // Time label cell
-    const timeCls = ['sg-cell sg-time',
-      isDayFirst ? 'day-first' : '',
-      isWeekend  ? 'is-weekend' : '',
-    ].filter(Boolean).join(' ');
+    // Shift label — for off days just show the day name
+    let shiftLabelHTML = '';
+    if (!worked) {
+      if (isFirst) {
+        const offReason = isSun ? '(Sun)' : '(off)';
+        shiftLabelHTML = `<div class="t-date" style="opacity:0.5">${dateStr}</div><div class="t-shift" style="color:#94a3b8;font-size:9px">${offReason}</div>`;
+      }
+      // For subsequent shifts of an off-day, render a thin spacer row
+    } else {
+      shiftLabelHTML = `
+        ${isFirst ? `<div class="t-date">${dateStr}</div>` : ''}
+        <div class="t-shift ${row.shiftCls}">${row.shiftLabel}</div>`;
+    }
 
-    dataRows += `<div class="${timeCls}" style="grid-column:1;grid-row:${gridRow}">
-      ${isDayFirst ? `<div class="t-date">${dateStr}</div>` : ''}
-      <div class="t-shift ${sd.cls}">${sd.label}</div>
+    dataRows += `<div class="${timeCls}" style="grid-column:1;grid-row:${gridRow}${!worked&&!isFirst?';min-height:8px':''}">
+      ${shiftLabelHTML}
     </div>`;
 
     // Data cells
     allCols.forEach((col, ci) => {
-      const gridCol = ci + 2;
-      const items = getItemsForColShift(col, s);
+      const gridCol  = ci + 2;
+      const dropArea = col.area;
+      const dropType = col.type === 'mesh' ? 'meshes' : 'cages';
 
-      const cellCls = ['sg-cell sg-data',
-        isWeekend  ? 'is-weekend' : '',
-        isDayFirst ? 'day-first'  : '',
-      ].filter(Boolean).join(' ');
+      if (!worked) {
+        // Off-day / Sunday — greyed, no interaction
+        const offCls = isSun ? 'sg-cell sg-data sunday-cell' : 'sg-cell sg-data off-day-cell';
+        const ht = (!isFirst) ? 'style="grid-column:'+gridCol+';grid-row:'+gridRow+';min-height:8px"' : 'style="grid-column:'+gridCol+';grid-row:'+gridRow+'"';
+        dataRows += `<div class="${offCls}" ${ht}></div>`;
+        return;
+      }
+
+      // Working shift — normal cell
+      const shiftNum = row.shiftNum; // 1-based worked shift number
+      const items    = getItemsForColWorkedShift(col, shiftNum);
+
+      let cellCls = 'sg-cell sg-data';
+      if (isFirst) cellCls += ' workday-first';
 
       let pills = '';
       items.forEach(item => {
-        const itemStart = (item.start_shift || 1) - 1;
-        const itemEnd   = itemStart + Math.max(1, item.shifts_required);
-        const doneEnd   = itemStart + item.shifts_completed;
-        const isDone    = s < doneEnd;
-        const isStart   = s === itemStart;
-        const isLast    = s === Math.ceil(itemEnd) - 1;
+        const itemStart = item.start_shift;                    // 1-based worked shift
+        const itemEnd   = itemStart + Math.ceil(item.shifts_required) - 1; // inclusive
+        const doneEnd   = itemStart + item.shifts_completed - 1;
+        const isDone    = shiftNum <= doneEnd;
+        const isStartR  = shiftNum === itemStart;
+        const isLastR   = shiftNum === itemEnd;
 
         let spanCls = 'span-mid';
-        if (isStart && isLast) spanCls = 'span-solo';
-        else if (isStart)      spanCls = 'span-start';
-        else if (isLast)       spanCls = 'span-end';
+        if (isStartR && isLastR) spanCls = 'span-solo';
+        else if (isStartR)       spanCls = 'span-start';
+        else if (isLastR)        spanCls = 'span-end';
 
         const doneCls = isDone ? 'done-shade' : '';
-        const label   = isStart ? item.name : '';
+        const label   = isStartR ? item.name : '';
         const itype   = col.type === 'mesh' ? 'meshes' : 'cages';
         pills += `<div class="sg-pill ${spanCls} ${doneCls}" style="background:${col.color}"
           draggable="true"
-          title="${item.name} — ${Math.round(item.shifts_completed/item.shifts_required*100)||0}% done"
+          title="${item.name} — shift ${itemStart}→${itemEnd} — ${Math.round(item.shifts_completed/item.shifts_required*100)||0}% done"
           ondragstart="onGanttPillDragStart(event,'${item.id}','${col.area}','${itype}')"
           ondragend="onGanttPillDragEnd(event,'${item.id}')">${label}</div>`;
       });
 
-      // Drop zone on each data cell — pass shift index so vertical drop inserts at that position
-      const dropArea = col.area;
-      const dropType = col.type === 'mesh' ? 'meshes' : 'cages';
       dataRows += `<div class="${cellCls}" style="grid-column:${gridCol};grid-row:${gridRow}"
         ondragover="onGanttCellDragOver(event,'${dropArea}','${dropType}')"
-        ondrop="onGanttCellDrop(event,'${dropArea}','${dropType}',${s})"
+        ondrop="onGanttCellDrop(event,'${dropArea}','${dropType}',${shiftNum})"
         ondragleave="onGanttCellDragLeave(event)">${pills}</div>`;
     });
   }
 
-  inner.innerHTML = `<div class="sg-table" style="grid-template-columns:${gridCols};grid-template-rows:34px 44px repeat(${totalShifts},28px)">
+  // Row template: each row is 28px for worked, 8px for extra off-day shifts (first off shift is 28px)
+  const rowTemplate = allRows.map((row, ri) => {
+    if (!row.worked) return (row.isFirstOfDay ? '28px' : '8px');
+    return '28px';
+  }).join(' ');
+
+  inner.innerHTML = `<div class="sg-table" style="grid-template-columns:${gridCols};grid-template-rows:34px 44px ${rowTemplate}">
     ${grpRow}
     ${colRow}
     ${dataRows}
   </div>`;
+
+  // Render schedule bar whenever gantt renders
+  renderScheduleBar();
 }
 
 // Keep stubs so nothing else breaks
@@ -2481,16 +2698,15 @@ async function saveProgramme() {
 // INIT
 // ═══════════════════════════════════════════════════════
 document.addEventListener('DOMContentLoaded', () => {
-  // Set today as default start date
   document.getElementById('prog-start').value = new Date().toISOString().slice(0,10);
   updateHeader();
+  renderScheduleBar();
   if (API) {
     refreshAll();
   } else {
     showToast('Set your Worker URL in ⚙ Settings to get started', 'error');
     setTimeout(() => openSettings(), 800);
   }
-  // Auto-refresh every 30s
   setInterval(() => { if (API) refreshAll(); }, 30000);
 });
 </script>
