@@ -595,6 +595,67 @@
     .header-stats { display: none; }
     .main { padding: 12px; }
   }
+
+  /* ── QUEUE PREVIEW ── */
+  .queue-preview {
+    background: #f8fafc;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    max-height: 220px;
+    overflow-y: auto;
+  }
+  .queue-slot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    border: 2px solid transparent;
+    transition: all 0.12s;
+    background: #fff;
+    border: 1px solid var(--border-light);
+  }
+  .queue-slot:hover { border-color: var(--accent); background: #eff6ff; }
+  .queue-slot.selected { border-color: var(--accent); background: #eff6ff; box-shadow: 0 0 0 2px rgba(26,86,219,0.15); }
+  .queue-slot.insert-slot {
+    border-style: dashed;
+    border-color: var(--accent);
+    background: #f0f7ff;
+    color: var(--accent);
+    font-weight: 600;
+    justify-content: center;
+    font-size: 11px;
+  }
+  .queue-slot.insert-slot.selected {
+    background: #dbeafe;
+    box-shadow: 0 0 0 2px rgba(26,86,219,0.2);
+  }
+  .queue-slot.existing-cage {
+    opacity: 0.85;
+  }
+  .queue-slot.existing-cage .q-name { font-weight: 600; font-size: 12px; }
+  .queue-slot.existing-cage .q-detail { font-size: 10px; color: var(--muted); }
+  .queue-slot .q-icon { font-size: 14px; flex-shrink: 0; }
+  .queue-slot .q-info { flex: 1; display: flex; flex-direction: column; gap: 1px; }
+  .queue-slot .q-shifts { font-size: 10px; color: var(--muted); margin-left: auto; white-space: nowrap; }
+  .queue-empty { text-align: center; color: var(--muted); font-size: 11px; padding: 10px; font-style: italic; }
+  .queue-new-badge {
+    display: inline-flex;
+    align-items: center;
+    background: var(--accent);
+    color: #fff;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 3px;
+    letter-spacing: 0.5px;
+    margin-left: 4px;
+  }
 </style>
 </head>
 <body>
@@ -794,11 +855,12 @@
 
 <!-- ── CAGE MODAL ── -->
 <div id="cage-modal" class="modal-overlay">
-  <div class="modal">
+  <div class="modal" style="width:580px">
     <div class="modal-title">
       <span id="cage-modal-title">New Cage</span>
       <button class="btn btn-secondary btn-sm btn-icon" onclick="closeCageModal()">✕</button>
     </div>
+
     <div class="form-row">
       <div class="form-group" style="flex:2">
         <label>Cage Name / ID</label>
@@ -806,29 +868,13 @@
       </div>
       <div class="form-group">
         <label>VST Area</label>
-        <select id="c-vst">
+        <select id="c-vst" onchange="onVstChange()">
           <option value="VST110">VST 110</option>
           <option value="VST120">VST 120</option>
           <option value="VST130">VST 130</option>
           <option value="VST140">VST 140</option>
         </select>
       </div>
-    </div>
-    <div class="form-row">
-      <div class="form-group">
-        <label>Shifts Required</label>
-        <input id="c-shifts" type="number" step="0.5" min="0.5" value="3">
-      </div>
-      <div class="form-group">
-        <label>Shifts Completed</label>
-        <input id="c-shifts-done" type="number" step="0.5" min="0" value="0">
-      </div>
-      <div class="form-group">
-        <label>Start Shift #</label>
-        <input id="c-start" type="number" min="1" placeholder="e.g. 1">
-      </div>
-    </div>
-    <div class="form-row">
       <div class="form-group">
         <label>Status</label>
         <select id="c-status">
@@ -838,6 +884,28 @@
         </select>
       </div>
     </div>
+
+    <div class="form-row">
+      <div class="form-group">
+        <label>Shifts Required</label>
+        <input id="c-shifts" type="number" step="0.5" min="0.5" value="3" onchange="refreshQueuePreview()">
+      </div>
+      <div class="form-group">
+        <label>Shifts Completed</label>
+        <input id="c-shifts-done" type="number" step="0.5" min="0" value="0">
+      </div>
+    </div>
+
+    <!-- Queue position picker — shown for new cages, hidden for edits -->
+    <div id="queue-section" style="margin-bottom:14px">
+      <div class="form-group" style="margin-bottom:8px">
+        <label>Position in VST Queue</label>
+      </div>
+      <div id="queue-preview" class="queue-preview"></div>
+      <input type="hidden" id="c-insert-after-id" value="">
+      <input type="hidden" id="c-start" value="">
+    </div>
+
     <div class="form-group" style="margin-bottom:10px">
       <label>Assign Meshes (up to 4)</label>
       <div class="mesh-picker" id="cage-mesh-picker"></div>
@@ -1226,15 +1294,180 @@ async function saveMesh() {
 // ═══════════════════════════════════════════════════════
 // MODAL — CAGE
 // ═══════════════════════════════════════════════════════
+
+// Returns cages in a VST sorted by start_shift, excluding the one being edited
+function vstQueue(vstArea, excludeId = null) {
+  return cages
+    .filter(c => c.vst_area === vstArea && c.id !== excludeId)
+    .sort((a, b) => (a.start_shift || 999999) - (b.start_shift || 999999));
+}
+
+// Given a queue and an insert-after cage id (null = insert at start),
+// calculate what start_shift the new cage would get.
+function calcInsertStart(queue, insertAfterId, newShiftsRequired) {
+  if (queue.length === 0) {
+    // No existing cages — start at shift 1
+    return 1;
+  }
+  if (insertAfterId === null || insertAfterId === '') {
+    // Insert at beginning — start at shift 1, everything else pushes
+    return 1;
+  }
+  const idx = queue.findIndex(c => c.id === insertAfterId);
+  if (idx === -1) {
+    // Append to end
+    const last = queue[queue.length - 1];
+    return (last.start_shift || 1) + Math.ceil(last.shifts_required);
+  }
+  const afterCage = queue[idx];
+  return (afterCage.start_shift || 1) + Math.ceil(afterCage.shifts_required);
+}
+
+// Render the queue preview for the current VST, with selectable insert positions
+function refreshQueuePreview() {
+  if (editCageId) return; // not shown when editing
+  const vst = document.getElementById('c-vst').value;
+  const newShifts = parseFloat(document.getElementById('c-shifts').value) || 3;
+  const queue = vstQueue(vst);
+  const currentInsertAfter = document.getElementById('c-insert-after-id').value;
+  const container = document.getElementById('queue-preview');
+
+  function shiftToLabel(s) {
+    if (!s) return '—';
+    const spd = parseInt(programme.shifts_per_day) || 3;
+    const names = spd === 3 ? ['AM','Noon','PM'] : spd === 2 ? ['AM','PM'] : ['S'];
+    const dayIdx = Math.floor((s-1) / spd);
+    const shiftInDay = (s-1) % spd;
+    const date = new Date(programme.plan_start_date || new Date());
+    date.setDate(date.getDate() + dayIdx);
+    const dStr = date.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+    return `${dStr} ${names[shiftInDay] || 'S'+(shiftInDay+1)}`;
+  }
+
+  // Build simulated queue with new cage inserted at selected position
+  function buildSimulated(insertAfterId) {
+    const newStart = calcInsertStart(queue, insertAfterId, newShifts);
+    // Re-sequence: all cages that would come after get pushed
+    let result = [];
+    // cages before insertion point keep their start shifts
+    let insertIdx = insertAfterId === null || insertAfterId === ''
+      ? 0
+      : (queue.findIndex(c => c.id === insertAfterId) + 1);
+    
+    let cursor = newStart;
+    // Build before-new
+    for (let i = 0; i < insertIdx; i++) {
+      result.push({ ...queue[i], simStart: queue[i].start_shift });
+    }
+    // New cage
+    result.push({ id: '__new__', name: document.getElementById('c-name').value || '(new cage)', shifts_required: newShifts, simStart: newStart, isNew: true });
+    // After-new: recalculate from newStart + newShifts
+    cursor = newStart + Math.ceil(newShifts);
+    for (let i = insertIdx; i < queue.length; i++) {
+      result.push({ ...queue[i], simStart: cursor });
+      cursor += Math.ceil(queue[i].shifts_required);
+    }
+    return result;
+  }
+
+  // Determine a default selection — append to end
+  let defaultInsertAfter = currentInsertAfter;
+  if (defaultInsertAfter === '' && queue.length > 0) {
+    defaultInsertAfter = queue[queue.length - 1].id;
+  }
+
+  const sim = buildSimulated(defaultInsertAfter);
+
+  let html = '';
+
+  if (queue.length === 0) {
+    html = `<div class="queue-empty">No cages planned in ${vst} yet — this will be the first.</div>`;
+    html += `<div class="queue-slot insert-slot selected" style="margin-top:6px">
+      ✦ Place as first cage in ${vst}
+      <span class="queue-new-badge">NEW</span>
+    </div>`;
+    document.getElementById('c-insert-after-id').value = '';
+    document.getElementById('c-start').value = '1';
+    container.innerHTML = html;
+    return;
+  }
+
+  // Show positions as: [Insert before first] → cage1 → [Insert after cage1] → cage2 → ...
+  // Each insert slot becomes selectable
+  html += `<div style="font-size:10px;color:var(--muted);margin-bottom:6px;padding:0 2px">
+    Click a position to place the new cage. The programme will adjust automatically.
+  </div>`;
+
+  // "Insert at beginning" option
+  const atStart = (defaultInsertAfter === null || defaultInsertAfter === '');
+  html += `<div class="queue-slot insert-slot ${atStart?'selected':''}" onclick="selectInsertPosition(null)">
+    ↑ Insert at start of ${vst} queue
+  </div>`;
+
+  queue.forEach((c, i) => {
+    const isAfterSelected = defaultInsertAfter === c.id;
+    const simItem = sim.find(s => s.id === c.id);
+    const origStart = shiftToLabel(c.start_shift);
+    const newStartLabel = shiftToLabel(simItem?.simStart);
+    const shifted = simItem && simItem.simStart !== c.start_shift;
+    const pct = c.shifts_required > 0 ? Math.round(c.shifts_completed / c.shifts_required * 100) : 0;
+
+    html += `<div class="queue-slot existing-cage" style="pointer-events:none">
+      <span class="q-icon">⬡</span>
+      <div class="q-info">
+        <div class="q-name">${c.name}</div>
+        <div class="q-detail">
+          ${shifted
+            ? `<span style="text-decoration:line-through;color:#aaa">${origStart}</span> → <span style="color:var(--warn);font-weight:600">${newStartLabel}</span>`
+            : `<span>${origStart}</span>`}
+          &nbsp;·&nbsp; ${c.shifts_required} shifts &nbsp;·&nbsp; ${pct}% done
+          &nbsp;<span class="badge badge-${c.status}" style="font-size:9px">${c.status.replace('_',' ')}</span>
+        </div>
+      </div>
+    </div>`;
+
+    // Insert after this cage
+    html += `<div class="queue-slot insert-slot ${isAfterSelected?'selected':''}" onclick="selectInsertPosition('${c.id}')">
+      ↓ Insert after ${c.name}
+    </div>`;
+  });
+
+  document.getElementById('c-insert-after-id').value = defaultInsertAfter || '';
+  // Calculate and store start shift
+  const calcStart = calcInsertStart(queue, defaultInsertAfter, newShifts);
+  document.getElementById('c-start').value = calcStart;
+
+  container.innerHTML = html;
+}
+
+function selectInsertPosition(insertAfterId) {
+  const vst = document.getElementById('c-vst').value;
+  const newShifts = parseFloat(document.getElementById('c-shifts').value) || 3;
+  const queue = vstQueue(vst);
+  document.getElementById('c-insert-after-id').value = insertAfterId || '';
+  const calcStart = calcInsertStart(queue, insertAfterId, newShifts);
+  document.getElementById('c-start').value = calcStart;
+  refreshQueuePreview();
+}
+
+function onVstChange() {
+  document.getElementById('c-insert-after-id').value = '';
+  refreshQueuePreview();
+}
+
 function openCageModal(id = null) {
   editCageId = id;
   selectedMeshIds = [];
   document.getElementById('cage-modal-title').textContent = id ? 'Edit Cage' : 'New Cage';
 
+  const queueSection = document.getElementById('queue-section');
+
   // Build mesh picker
   const picker = document.getElementById('cage-mesh-picker');
   const available = meshes.filter(m => m.status !== 'used' || (id && m.cage_id === id));
+
   if (id) {
+    // EDIT MODE — show start shift as plain info, hide queue picker
     const c = cages.find(x=>x.id===id);
     selectedMeshIds = (c.meshes||[]).map(m=>m.id);
     document.getElementById('c-name').value = c.name;
@@ -1244,13 +1477,24 @@ function openCageModal(id = null) {
     document.getElementById('c-start').value = c.start_shift || '';
     document.getElementById('c-status').value = c.status;
     document.getElementById('c-notes').value = c.notes || '';
+    queueSection.style.display = 'none';
   } else {
+    // NEW MODE — show queue picker
     document.getElementById('c-name').value = '';
     document.getElementById('c-shifts').value = 3;
     document.getElementById('c-shifts-done').value = 0;
     document.getElementById('c-start').value = '';
     document.getElementById('c-status').value = 'planned';
     document.getElementById('c-notes').value = '';
+    document.getElementById('c-insert-after-id').value = '';
+    queueSection.style.display = 'block';
+    // Default to end of queue for default VST
+    const defaultVst = document.getElementById('c-vst').value;
+    const q = vstQueue(defaultVst);
+    if (q.length > 0) {
+      document.getElementById('c-insert-after-id').value = q[q.length - 1].id;
+    }
+    refreshQueuePreview();
   }
 
   picker.innerHTML = available.length ? available.map(m => `
@@ -1275,30 +1519,58 @@ function toggleMeshPick(id, el) {
 }
 
 async function saveCage() {
+  const name         = document.getElementById('c-name').value.trim();
+  const vst_area     = document.getElementById('c-vst').value;
+  const shifts_req   = parseFloat(document.getElementById('c-shifts').value);
+  const shifts_done  = parseFloat(document.getElementById('c-shifts-done').value);
+  const status       = document.getElementById('c-status').value;
+  const notes        = document.getElementById('c-notes').value || null;
+  const insertAfter  = document.getElementById('c-insert-after-id').value;
+  const start_shift  = parseInt(document.getElementById('c-start').value) || null;
+
+  if (!name) { showToast('Name required', 'error'); return; }
+
   const data = {
-    name: document.getElementById('c-name').value.trim(),
-    vst_area: document.getElementById('c-vst').value,
-    shifts_required: parseFloat(document.getElementById('c-shifts').value),
-    shifts_completed: parseFloat(document.getElementById('c-shifts-done').value),
-    start_shift: parseInt(document.getElementById('c-start').value) || null,
-    status: document.getElementById('c-status').value,
-    notes: document.getElementById('c-notes').value || null,
+    name, vst_area,
+    shifts_required: shifts_req,
+    shifts_completed: shifts_done,
+    start_shift,
+    status, notes,
     mesh_ids: selectedMeshIds,
   };
-  if (!data.name) { showToast('Name required', 'error'); return; }
+
   try {
     if (editCageId) {
+      // Simple update — no re-sequencing on edit (shifts_required change handled separately)
       const updated = await api(`/api/cages/${editCageId}`, 'PUT', data);
-      cages = cages.map(c => c.id===editCageId ? updated : c);
+      cages = cages.map(c => c.id === editCageId ? { ...updated, meshes: cages.find(x=>x.id===editCageId)?.meshes || [] } : c);
     } else {
+      // INSERT: push all cages after insertion point forward
+      const queue = vstQueue(vst_area);
+      const insertIdx = insertAfter === '' || insertAfter === null
+        ? 0
+        : (queue.findIndex(c => c.id === insertAfter) + 1);
+
+      // Save the new cage first
       const created = await api('/api/cages', 'POST', data);
-      cages.push(created);
+      cages.push({ ...created, meshes: [] });
+
+      // Re-sequence: update start_shift for all cages after insertion point
+      let cursor = start_shift + Math.ceil(shifts_req);
+      const toUpdate = queue.slice(insertIdx);
+      for (const c of toUpdate) {
+        const updated = await api(`/api/cages/${c.id}`, 'PUT', { start_shift: cursor });
+        cages = cages.map(x => x.id === c.id ? { ...updated, meshes: x.meshes } : x);
+        cursor += Math.ceil(c.shifts_required);
+      }
     }
+
     // refresh meshes to reflect status changes
     meshes = await api('/api/meshes');
     closeCageModal();
     renderCageTable(); renderMeshTable(); renderDashboard(); updateHeader();
-    showToast(editCageId ? 'Cage updated ✓' : 'Cage created ✓');
+    if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
+    showToast(editCageId ? 'Cage updated ✓' : 'Cage added to queue ✓');
   } catch(e) { showToast(e.message, 'error'); }
 }
 
