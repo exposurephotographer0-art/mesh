@@ -1421,18 +1421,7 @@ function progressBar(done, req) {
 // RESEQUENCE HELPERS  (shared by mesh + cage)
 // ═══════════════════════════════════════════════════════
 
-// Recompute start_shifts for an ordered array of items starting from startShift
-// Returns array of {id, start_shift} update objects
-function computeSequence(orderedItems, startShift = 1) {
-  let cursor = startShift;
-  return orderedItems.map(item => {
-    const s = cursor;
-    cursor += Math.ceil(item.shifts_required || 1);
-    return { id: item.id, start_shift: s };
-  });
-}
-
-// Save a sequence of {id, start_shift} updates to the API (meshes or cages)
+// Save a sequence of {id, start_shift} updates to the API
 async function saveSequence(updates, type = 'cages') {
   for (const u of updates) {
     const updated = await api(`/api/${type}/${u.id}`, 'PUT', { start_shift: u.start_shift });
@@ -1444,71 +1433,170 @@ async function saveSequence(updates, type = 'cages') {
   }
 }
 
-// Resequence all items in a given area/VST from shift 1
-async function resequenceArea(area, type = 'cages') {
-  let queue;
+// computeSequence: ONLY used when packing with no gaps (new inserts).
+// Preserves gaps is handled separately.
+function computeSequence(orderedItems, startShift = 1) {
+  let cursor = startShift;
+  return orderedItems.map(item => {
+    const s = cursor;
+    cursor += Math.ceil(item.shifts_required || 1);
+    return { id: item.id, start_shift: s };
+  });
+}
+
+// Get sorted queue for an area, excluding optional id
+function getAreaQueue(area, type, excludeId = null) {
   if (type === 'cages') {
-    queue = cages.filter(c => c.vst_area === area && c.start_shift != null)
-                 .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
-  } else {
-    queue = meshes.filter(m => m.area === area && m.start_shift != null)
-                  .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
+    return cages.filter(c => c.vst_area === area && c.start_shift != null && c.id !== excludeId)
+                .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
   }
-  const updates = computeSequence(queue, 1);
+  return meshes.filter(m => m.area === area && m.start_shift != null && m.id !== excludeId)
+               .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
+}
+
+// When an item's shifts_required changes, push/pull items that follow it
+// to maintain their relative positions (gaps preserved between them).
+async function pushAfterResize(id, itemStart, newDur, area, type) {
+  const oldItem = type === 'cages'
+    ? cages.find(c => c.id === id)
+    : meshes.find(m => m.id === id);
+  const oldDur  = Math.ceil(oldItem.shifts_required || 1);
+  const delta   = Math.ceil(newDur) - oldDur; // positive = grew, negative = shrank
+  if (delta === 0) return;
+  const oldEnd  = itemStart + oldDur - 1;
+  const after   = getAreaQueue(area, type).filter(x => x.id !== id && (x.start_shift||0) > oldEnd);
+  if (!after.length) return;
+  await saveSequence(after.map(x => ({ id: x.id, start_shift: x.start_shift + delta })), type);
+}
+
+// Close the gap left by a removed item — slide items that came AFTER it
+// leftward by exactly the removed item's duration. Items BEFORE it are untouched.
+// Gap items (items that were already after a gap) keep their relative gap.
+async function closeGapAfterRemoval(removedItem, area, type) {
+  const removedDur   = Math.ceil(removedItem.shifts_required || 1);
+  const removedStart = removedItem.start_shift || 1;
+  const removedEnd   = removedStart + removedDur - 1;
+
+  // Items that start AFTER the removed item's end — shift them left by removedDur
+  const after = getAreaQueue(area, type).filter(x => (x.start_shift||0) > removedEnd);
+  if (!after.length) return;
+  const updates = after.map(x => ({ id: x.id, start_shift: x.start_shift - removedDur }));
   await saveSequence(updates, type);
 }
 
-// Move item at fromIdx to toIdx within its area queue, then resequence
+// Move item to a different position within its area, preserving ALL gaps.
+// Strategy: remove item from its current position, close that gap, then
+// insert at the target position (either before an item, or at a specific shift).
 async function moveItemInQueue(id, toIdx, area, type = 'cages') {
-  let queue;
-  if (type === 'cages') {
-    queue = cages.filter(c => c.vst_area === area && c.start_shift != null)
-                 .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
-  } else {
-    queue = meshes.filter(m => m.area === area && m.start_shift != null)
-                  .sort((a,b) => (a.start_shift||0) - (b.start_shift||0));
-  }
+  const queue = getAreaQueue(area, type);
   const fromIdx = queue.findIndex(x => x.id === id);
   if (fromIdx === -1 || fromIdx === toIdx) return;
-  const [item] = queue.splice(fromIdx, 1);
-  queue.splice(toIdx, 0, item);
-  const updates = computeSequence(queue, 1);
-  await saveSequence(updates, type);
+
+  const item    = queue[fromIdx];
+  const itemDur = Math.ceil(item.shifts_required || 1);
+
+  // Remove item from queue, compute gap-closing shifts for items after it
+  const qWithout = queue.filter((_, i) => i !== fromIdx);
+  // Items after fromIdx slide left by itemDur
+  const slideLeft = qWithout.slice(fromIdx).map(x => ({
+    id: x.id,
+    start_shift: x.start_shift - itemDur,
+    shifts_required: x.shifts_required,
+  }));
+  const unchanged = qWithout.slice(0, fromIdx);
+  const adjustedQueue = [...unchanged, ...slideLeft];
+
+  // Now determine insertion position in adjustedQueue
+  // toIdx was based on original queue; adjust for removal
+  let insertIdx = toIdx > fromIdx ? toIdx - 1 : toIdx;
+  insertIdx = Math.max(0, Math.min(insertIdx, adjustedQueue.length));
+
+  // Find the shift number to insert at
+  let newStart;
+  if (insertIdx === 0) {
+    // Insert before first item — place just before it, then push it right
+    const first = adjustedQueue[0];
+    newStart = first ? Math.max(1, first.start_shift - itemDur) : 1;
+    // Actually: slot in at first.start_shift, pushing items at/after right by itemDur
+  } else {
+    // Insert after item at insertIdx-1
+    const prev = adjustedQueue[insertIdx - 1];
+    newStart = prev.start_shift + Math.ceil(prev.shifts_required);
+  }
+
+  // Push items at insertIdx onward right by itemDur to make room
+  const pushRight = adjustedQueue.slice(insertIdx)
+    .filter(x => x.start_shift >= newStart)
+    .map(x => ({ id: x.id, start_shift: x.start_shift + itemDur }));
+
+  // Save slide-left first
+  const slideUpdates = slideLeft.map(x => ({ id: x.id, start_shift: x.start_shift }));
+  if (slideUpdates.length) await saveSequence(slideUpdates, type);
+
+  // Save push-right
+  if (pushRight.length) await saveSequence(pushRight, type);
+
+  // Save the item itself at its new position
+  const itemUpdate = [{ id, start_shift: newStart }];
+  await saveSequence(itemUpdate, type);
+
   renderAll();
   showToast('Order updated ✓');
 }
 
-// Move item to a different area entirely, appending to end of that area's queue
+// Move item to a different area entirely.
+// OLD area: close the gap — slide items after the removed one leftward.
+// NEW area: append after the last item (or at shift 1 if empty).
+// Gaps in BOTH areas are fully preserved.
 async function moveItemToArea(id, newArea, type = 'cages') {
+  const item = type === 'cages'
+    ? cages.find(c => c.id === id)
+    : meshes.find(m => m.id === id);
+  if (!item) return;
+
+  const oldArea = type === 'cages' ? item.vst_area : item.area;
+  if (oldArea === newArea) return;
+
+  const itemDur    = Math.ceil(item.shifts_required || 1);
+  const itemStart  = item.start_shift || 1;
+  const itemEnd    = itemStart + itemDur - 1;
+
+  // ── 1. Update the item's area/VST in DB, clear start_shift temporarily ──
+  let updatedItem;
   if (type === 'cages') {
-    const cage = cages.find(c => c.id === id);
-    if (!cage || cage.vst_area === newArea) return;
-    const oldArea = cage.vst_area;
-    // Remove from old area, resequence old
-    const updated = await api(`/api/cages/${id}`, 'PUT', { vst_area: newArea, start_shift: null });
-    cages = cages.map(c => c.id === id ? { ...updated, meshes: c.meshes } : c);
-    await resequenceArea(oldArea, 'cages');
-    // Append to end of new area
-    const newQueue = cages.filter(c => c.vst_area === newArea && c.start_shift != null)
-                          .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
-    const last = newQueue[newQueue.length - 1];
-    const newStart = last ? (last.start_shift + Math.ceil(last.shifts_required)) : 1;
+    updatedItem = await api(`/api/cages/${id}`, 'PUT', { vst_area: newArea, start_shift: null });
+    cages = cages.map(c => c.id === id ? { ...updatedItem, meshes: c.meshes } : c);
+  } else {
+    updatedItem = await api(`/api/meshes/${id}`, 'PUT', { area: newArea, start_shift: null });
+    meshes = meshes.map(m => m.id === id ? updatedItem : m);
+  }
+
+  // ── 2. Close gap in OLD area ─────────────────────────────────────────────
+  // Slide every item in old area that started AFTER itemEnd leftward by itemDur
+  const oldAfter = getAreaQueue(oldArea, type)
+    .filter(x => (x.start_shift || 0) > itemEnd);
+  if (oldAfter.length) {
+    await saveSequence(
+      oldAfter.map(x => ({ id: x.id, start_shift: x.start_shift - itemDur })),
+      type
+    );
+  }
+
+  // ── 3. Append to end of NEW area ────────────────────────────────────────
+  const newQueue = getAreaQueue(newArea, type); // excludes the moved item (start_shift=null)
+  const last     = newQueue[newQueue.length - 1];
+  const newStart = last
+    ? last.start_shift + Math.ceil(last.shifts_required)
+    : 1;
+
+  if (type === 'cages') {
     const final = await api(`/api/cages/${id}`, 'PUT', { start_shift: newStart });
     cages = cages.map(c => c.id === id ? { ...final, meshes: c.meshes } : c);
   } else {
-    const mesh = meshes.find(m => m.id === id);
-    if (!mesh || mesh.area === newArea) return;
-    const oldArea = mesh.area;
-    const updated = await api(`/api/meshes/${id}`, 'PUT', { area: newArea, start_shift: null });
-    meshes = meshes.map(m => m.id === id ? updated : m);
-    await resequenceArea(oldArea, 'meshes');
-    const newQueue = meshes.filter(m => m.area === newArea && m.start_shift != null)
-                           .sort((a,b) => (a.start_shift||0)-(b.start_shift||0));
-    const last = newQueue[newQueue.length - 1];
-    const newStart = last ? (last.start_shift + Math.ceil(last.shifts_required)) : 1;
     const final = await api(`/api/meshes/${id}`, 'PUT', { start_shift: newStart });
     meshes = meshes.map(m => m.id === id ? final : m);
   }
+
   renderAll();
   showToast('Moved ✓');
 }
@@ -1600,10 +1688,10 @@ async function quickUpdateMesh(id, field, value) {
     const updated = await api(`/api/meshes/${id}`, 'PUT', { [field]: parseFloat(value) });
     const idx = meshes.findIndex(m=>m.id===id);
     if (idx > -1) meshes[idx] = updated;
-    // If shifts_required changed, resequence the area
+    // If shifts_required changed, push/pull items that follow this one
     if (field === 'shifts_required') {
       const m = meshes.find(x=>x.id===id);
-      if (m?.start_shift) await resequenceArea(m.area, 'meshes');
+      if (m?.start_shift) await pushAfterResize(m.id, m.start_shift, parseFloat(value), m.area, 'meshes');
     }
     renderAll();
     showToast('Updated ✓');
@@ -1621,7 +1709,7 @@ async function deleteMesh(id) {
     const m = meshes.find(x=>x.id===id);
     await api(`/api/meshes/${id}`, 'DELETE');
     meshes = meshes.filter(x=>x.id!==id);
-    if (m?.area && m?.start_shift) await resequenceArea(m.area, 'meshes');
+    if (m?.area && m?.start_shift) await closeGapAfterRemoval(m, m.area, 'meshes');
     renderAll();
     showToast('Mesh deleted');
   } catch(e) { showToast(e.message, 'error'); }
@@ -1703,7 +1791,7 @@ async function quickUpdateCage(id, field, value) {
     if (idx > -1) cages[idx] = { ...updated, meshes: cages[idx].meshes };
     if (field === 'shifts_required') {
       const c = cages.find(x=>x.id===id);
-      if (c?.start_shift) await resequenceArea(c.vst_area, 'cages');
+      if (c?.start_shift) await pushAfterResize(c.id, c.start_shift, parseFloat(value), c.vst_area, 'cages');
     }
     renderAll();
     showToast('Updated ✓');
@@ -1721,7 +1809,7 @@ async function deleteCage(id) {
     const c = cages.find(x=>x.id===id);
     await api(`/api/cages/${id}`, 'DELETE');
     cages = cages.filter(x=>x.id!==id);
-    if (c?.vst_area && c?.start_shift) await resequenceArea(c.vst_area, 'cages');
+    if (c?.vst_area && c?.start_shift) await closeGapAfterRemoval(c, c.vst_area, 'cages');
     renderAll();
     showToast('Cage deleted');
   } catch(e) { showToast(e.message, 'error'); }
@@ -1862,7 +1950,12 @@ async function onGanttCellDrop(e, dropArea, dropType, dropShiftNum) {
   // ── CROSS-AREA ───────────────────────────────────────────────────
   if (fromArea !== dropArea) {
     try {
-      // Change area/VST, temporarily clear start_shift
+      const movedItem = isCage ? cages.find(c=>c.id===id) : meshes.find(m=>m.id===id);
+      const movedDur   = Math.ceil(movedItem.shifts_required || 1);
+      const movedStart = movedItem.start_shift || 1;
+      const movedEnd   = movedStart + movedDur - 1;
+
+      // 1. Change area/VST, clear start_shift temporarily
       if (isCage) {
         const upd = await api(`/api/cages/${id}`, 'PUT', { vst_area: dropArea, start_shift: null });
         cages = cages.map(c => c.id===id ? {...upd, meshes:c.meshes} : c);
@@ -1870,19 +1963,31 @@ async function onGanttCellDrop(e, dropArea, dropType, dropShiftNum) {
         const upd = await api(`/api/meshes/${id}`, 'PUT', { area: dropArea, start_shift: null });
         meshes = meshes.map(m => m.id===id ? upd : m);
       }
-      await resequenceArea(fromArea, type); // resequence old area
 
-      // Insert at dropShiftNum position in new area
-      const draggedItem = isCage ? cages.find(c=>c.id===id) : meshes.find(m=>m.id===id);
-      const others = getQueue(dropArea).filter(x=>x.id!==id);
-      let insertIdx = others.length;
-      for (let i = 0; i < others.length; i++) {
-        if ((others[i].start_shift||1) > dropShiftNum) { insertIdx = i; break; }
+      // 2. Close gap in old area — slide items after movedEnd left by movedDur
+      const oldAfter = getAreaQueue(fromArea, type)
+        .filter(x => (x.start_shift||0) > movedEnd);
+      if (oldAfter.length) {
+        await saveSequence(oldAfter.map(x => ({ id: x.id, start_shift: x.start_shift - movedDur })), type);
       }
-      const newOrder = [...others];
-      newOrder.splice(insertIdx, 0, draggedItem);
-      const updates = computeSequence(newOrder, 1);
-      await saveSequence(updates, type);
+
+      // 3. Insert into new area at dropShiftNum, pushing items there right by movedDur
+      const newAreaItems = getAreaQueue(dropArea, type); // excludes moved item (null start)
+      // Items at or after dropShiftNum get pushed right
+      const pushRight = newAreaItems.filter(x => (x.start_shift||0) >= dropShiftNum);
+      if (pushRight.length) {
+        await saveSequence(pushRight.map(x => ({ id: x.id, start_shift: x.start_shift + movedDur })), type);
+      }
+
+      // 4. Place moved item at dropShiftNum
+      if (isCage) {
+        const final = await api(`/api/cages/${id}`, 'PUT', { start_shift: dropShiftNum });
+        cages = cages.map(c => c.id===id ? {...final, meshes:c.meshes} : c);
+      } else {
+        const final = await api(`/api/meshes/${id}`, 'PUT', { start_shift: dropShiftNum });
+        meshes = meshes.map(m => m.id===id ? final : m);
+      }
+
       renderAll();
       showToast(`Moved to ${dropArea} ✓`);
     } catch(err) { showToast(err.message, 'error'); }
