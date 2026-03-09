@@ -1445,12 +1445,12 @@ function saveSnags(snags) {
 function getSnags(itemId) {
   return loadSnags().filter(s => s.itemId === itemId);
 }
-function addSnag(itemId, itemType, severity, notes) {
+function addSnag(itemId, itemType, severity, notes, timeLogged) {
   const all = loadSnags();
   const snag = {
     id: 'snag_' + Date.now() + '_' + Math.random().toString(36).slice(2,6),
     itemId, itemType, severity, notes,
-    time_logged: new Date().toISOString(),
+    time_logged: timeLogged || new Date().toISOString(),
     resolved: false,
   };
   all.push(snag);
@@ -1482,7 +1482,11 @@ function saveSnapshots(snaps) {
 let offDays = new Set(JSON.parse(localStorage.getItem('cagetrack-offdays') || '[]'));
 
 function dateKey(d) {
-  return d.toISOString().slice(0, 10);
+  // Use local date parts to avoid UTC offset shifting the date
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
 }
 
 function isSunday(d) {
@@ -3219,6 +3223,8 @@ function renderDetailPanelBody(item, type, color) {
         </div>
         <div class="dp-label" style="margin-top:6px;margin-bottom:4px">Notes</div>
         <textarea class="dp-input" id="dp-snag-notes" rows="2" placeholder="Describe the snag..." style="resize:vertical;background:#fff"></textarea>
+        <div class="dp-label" style="margin-top:6px;margin-bottom:4px">Date &amp; Time</div>
+        <input class="dp-input" id="dp-snag-time" type="datetime-local" style="background:#fff">
         <div style="display:flex;gap:6px;margin-top:6px">
           <button class="btn btn-primary btn-sm" onclick="submitSnag()">Log Snag</button>
           <button class="btn btn-secondary btn-sm" onclick="toggleAddSnagForm()">Cancel</button>
@@ -3240,15 +3246,26 @@ function selectSnagSev(sev) {
 function toggleAddSnagForm() {
   const form = document.getElementById('dp-snag-form');
   if (!form) return;
-  form.style.display = form.style.display === 'none' ? 'block' : 'none';
-  selectedSnagSev = 'critical';
-  selectSnagSev('critical');
+  const isHidden = form.style.display === 'none';
+  form.style.display = isHidden ? 'block' : 'none';
+  if (isHidden) {
+    selectedSnagSev = 'critical';
+    selectSnagSev('critical');
+    // Pre-fill datetime to now (local time) in datetime-local format
+    const now = new Date();
+    const pad = n => String(n).padStart(2,'0');
+    const localISO = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+    const timeInput = document.getElementById('dp-snag-time');
+    if (timeInput) timeInput.value = localISO;
+  }
 }
 
 function submitSnag() {
   const notes = document.getElementById('dp-snag-notes')?.value?.trim();
   if (!notes) { showToast('Add a note for the snag', 'error'); return; }
-  addSnag(detailPanel.id, detailPanel.type, selectedSnagSev, notes);
+  const timeVal = document.getElementById('dp-snag-time')?.value;
+  const timeLogged = timeVal ? new Date(timeVal).toISOString() : new Date().toISOString();
+  addSnag(detailPanel.id, detailPanel.type, selectedSnagSev, notes, timeLogged);
   // Re-render snag list
   const item = detailPanel.type === 'mesh' ? meshes.find(m=>m.id===detailPanel.id) : cages.find(c=>c.id===detailPanel.id);
   if (item) {
