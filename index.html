@@ -1034,13 +1034,70 @@
   }
   .snag-badge.snag-badge-minor { background: #fef3c7; color: #b45309; }
   .snag-badge.snag-badge-resolved { background: #dcfce7; color: var(--ok); }
+
+/* ── PIN Overlay ── */
+#pin-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: #0d1420;
+  display: flex; align-items: center; justify-content: center;
+}
+.pin-box {
+  background: #1a2235; border: 1px solid #2d3a50; border-radius: 16px;
+  padding: 48px 40px; width: 340px; text-align: center;
+  box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+}
+.pin-logo {
+  width: 56px; height: 56px; border-radius: 12px; margin: 0 auto 20px;
+  background: linear-gradient(135deg, #1a56db, #0891b2);
+  display: flex; align-items: center; justify-content: center;
+  font: 700 18px 'DM Mono', monospace; color: #fff;
+}
+.pin-title { font: 700 20px 'Syne', sans-serif; color: #fff; margin-bottom: 4px; }
+.pin-sub { font: 500 11px 'DM Mono', monospace; color: #8899aa; letter-spacing: 0.06em; margin-bottom: 28px; }
+.pin-label { font: 600 10px 'DM Mono', monospace; color: #8899aa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 8px; text-align: left; }
+#pin-input {
+  background: #0d1420; border: 2px solid #2d3a50; border-radius: 8px;
+  color: #1a56db; font: 700 28px 'DM Mono', monospace;
+  text-align: center; letter-spacing: 0.3em; padding: 14px;
+  width: 100%; transition: border-color 0.15s; margin-bottom: 16px;
+}
+#pin-input:focus { outline: none; border-color: #1a56db; }
+#pin-submit-btn {
+  width: 100%; padding: 14px; border: none; border-radius: 8px;
+  background: linear-gradient(135deg, #1a56db, #0891b2);
+  color: #fff; font: 700 14px 'Syne', sans-serif; cursor: pointer;
+  transition: filter 0.12s; letter-spacing: 0.02em;
+}
+#pin-submit-btn:hover:not(:disabled) { filter: brightness(1.12); }
+#pin-submit-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+#pin-error {
+  display: none; color: #e05555; background: rgba(224,85,85,0.1);
+  border: 1px solid rgba(224,85,85,0.3); border-radius: 6px;
+  padding: 8px 12px; font-size: 12px; margin-bottom: 16px;
+}
 </style>
 </head>
 <body>
 
+<!-- ── PIN Overlay (shown until authenticated) ── -->
+<div id="pin-overlay" style="display:flex">
+  <div class="pin-box">
+    <div class="pin-logo">CT</div>
+    <div class="pin-title">CageTrack</div>
+    <div class="pin-sub">PRODUCTION PROGRAMME</div>
+    <div id="pin-error"></div>
+    <div class="pin-label">Enter PIN to continue</div>
+    <input type="password" id="pin-input" inputmode="numeric" maxlength="12" placeholder="••••" autocomplete="off">
+    <button id="pin-submit-btn" onclick="submitPin()">Unlock</button>
+  </div>
+</div>
+
+<!-- ── App (hidden until PIN entered) ── -->
+<div id="app-wrapper" style="display:none">
+
 <header>
   <div class="logo">
-    ⬡ CageTrack <span class="logo-badge">LIVE</span>
+    ⬡ CageTrack <span class="logo-badge">PROGRAMME</span>
   </div>
   <div class="header-stats">
     <div class="stat-pill">Meshes <span class="val" id="hdr-meshes">—</span></div>
@@ -1051,6 +1108,7 @@
   <div class="header-actions">
     <button class="btn btn-secondary btn-sm" onclick="openSettings()">⚙ Settings</button>
     <button class="btn btn-primary btn-sm" onclick="refreshAll()">↻ Refresh</button>
+    <button class="btn btn-secondary btn-sm" onclick="logout()" title="Log out">🔓 Log Out</button>
   </div>
 </header>
 
@@ -1162,8 +1220,10 @@
   <div id="page-audit" class="page">
     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px;">
       <div style="font-family:var(--font-display);font-size:16px;font-weight:700;">Programme Audit Log</div>
-      <div style="display:flex;gap:8px;align-items:center;">
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
         <span style="font-size:11px;color:var(--muted)">Snapshots are stored locally in your browser</span>
+        <button class="btn btn-secondary btn-sm" onclick="exportAllData()">⬇ Export Backup</button>
+        <button class="btn btn-secondary btn-sm" onclick="importAllData()">⬆ Import Backup</button>
         <button class="btn btn-primary" onclick="saveAuditSnapshot()">📷 Save Snapshot</button>
         <button class="btn btn-danger btn-sm" onclick="clearAllSnapshots()">Clear All</button>
       </div>
@@ -1173,8 +1233,10 @@
         <strong style="color:var(--text)">How it works:</strong>
         Save a named snapshot of the current programme at any point. Each snapshot captures all meshes, cages, and their positions.
         Click a snapshot to preview its contents, or restore it to roll back the programme to that state.
+        Use <strong>Export Backup</strong> to save a JSON file of all your data, and <strong>Import Backup</strong> to restore it.
       </div>
     </div>
+    <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="handleImportFile(event)">
     <div id="audit-list" style="display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 
@@ -1353,15 +1415,8 @@
       <button class="btn btn-secondary btn-sm btn-icon" onclick="closeSettings()">✕</button>
     </div>
     <div class="config-section">
-      <h3>API Connection</h3>
-      <div class="form-row">
-        <div class="form-group" style="flex:1">
-          <label>Worker URL</label>
-          <input id="worker-url" type="text" placeholder="https://your-worker.workers.dev">
-        </div>
-      </div>
-      <button class="btn btn-secondary btn-sm" onclick="testConnection()">Test Connection</button>
-      <span id="conn-status" style="margin-left:10px;font-size:11px;"></span>
+      <h3>Storage</h3>
+      <p style="font-size:12px;color:var(--muted);margin-bottom:10px">All data is saved locally in your browser. Use <strong>Export</strong> on the Audit Log tab to back up your data.</p>
     </div>
     <div class="config-section">
       <h3>Programme Settings</h3>
@@ -1398,11 +1453,148 @@
 
 <div id="toast"></div>
 
+</div><!-- /#app-wrapper -->
+
 <script>
+// ═══════════════════════════════════════════════════════
+// API CONFIG — Cloudflare Worker backend
+// ═══════════════════════════════════════════════════════
+const API_BASE = 'https://cage-tracker-api.exposurephotographer0.workers.dev';
+
+// ── PIN Auth ─────────────────────────────────────────────────────────
+let _sessionPin  = null;
+let _lockoutTimer = null;
+
+function showPinScreen(errorMsg = '', isLocked = false, remaining = 0) {
+  document.getElementById('pin-overlay').style.display = 'flex';
+  document.getElementById('app-wrapper').style.display = 'none';
+  const errEl = document.getElementById('pin-error');
+  const inp   = document.getElementById('pin-input');
+  const btn   = document.getElementById('pin-submit-btn');
+  if (errorMsg) { errEl.textContent = errorMsg; errEl.style.display = 'block'; }
+  else { errEl.style.display = 'none'; }
+  if (isLocked) {
+    inp.disabled = false;
+    inp.value = '';
+    inp.focus();
+    btn.disabled = true;
+    startLockoutCountdown(remaining);
+  } else {
+    inp.disabled = false;
+    btn.disabled = false;
+    btn.textContent = 'Unlock';
+    clearLockoutCountdown();
+    setTimeout(() => { if (inp) { inp.value = ''; inp.focus(); } }, 100);
+  }
+}
+
+function startLockoutCountdown(seconds) {
+  clearLockoutCountdown();
+  const btn = document.getElementById('pin-submit-btn');
+  const inp = document.getElementById('pin-input');
+  let remaining = seconds;
+  function tick() {
+    if (remaining <= 0) {
+      clearLockoutCountdown();
+      btn.disabled = false; btn.textContent = 'Unlock';
+      inp.disabled = false;
+      document.getElementById('pin-error').style.display = 'none';
+      inp.value = ''; inp.focus();
+      return;
+    }
+    const m = Math.floor(remaining / 60);
+    const s = String(remaining % 60).padStart(2, '0');
+    btn.textContent = `Locked — ${m}:${s}`;
+    remaining--;
+    _lockoutTimer = setTimeout(tick, 1000);
+  }
+  tick();
+}
+
+function clearLockoutCountdown() {
+  if (_lockoutTimer) { clearTimeout(_lockoutTimer); _lockoutTimer = null; }
+}
+
+async function submitPin() {
+  const pin = document.getElementById('pin-input').value.trim();
+  if (!pin) return;
+  const btn = document.getElementById('pin-submit-btn');
+  const wasLocked = btn.disabled;
+  if (!wasLocked) { btn.disabled = true; btn.textContent = 'Checking...'; }
+  try {
+    const res = await fetch(API_BASE + '/api/auth', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ pin })
+    });
+    const data = await res.json();
+    if (res.status === 429 || data.locked) {
+      showPinScreen(data.error || 'Too many attempts. Please wait.', true, data.remaining || 300);
+      return;
+    }
+    if (data.ok && data.level === 'admin_unlock') {
+      showPinScreen('');
+      const errEl = document.getElementById('pin-error');
+      errEl.textContent = '✓ Unlocked. Enter your access PIN.';
+      errEl.style.color = '#16a34a';
+      errEl.style.display = 'block';
+      return;
+    }
+    if (data.ok) {
+      _sessionPin = pin;
+      try { localStorage.setItem('ct_prog_pin', JSON.stringify({ pin, date: new Date().toISOString().slice(0,10) })); } catch(e) {}
+      document.getElementById('pin-overlay').style.display = 'none';
+      document.getElementById('app-wrapper').style.display = 'block';
+      await refreshAll();
+    } else {
+      showPinScreen(data.error || 'Incorrect PIN. Please try again.', false, 0);
+    }
+  } catch(e) {
+    showPinScreen('Connection error. Please try again.', false, 0);
+    const btn2 = document.getElementById('pin-submit-btn');
+    btn2.disabled = false; btn2.textContent = 'Unlock';
+  }
+}
+
+// ── Real API helper ───────────────────────────────────────────────────
+async function api(path, method = 'GET', body = null) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  try {
+    const opts = {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': _sessionPin ? `Bearer ${_sessionPin}` : ''
+      },
+      signal: controller.signal
+    };
+    if (body) opts.body = JSON.stringify(body);
+    const res = await fetch(API_BASE + path, opts);
+    if (res.status === 401) {
+      _sessionPin = null;
+      showPinScreen('Session expired. Please re-enter your PIN.');
+      throw new Error('Unauthorised');
+    }
+    if (!res.ok) {
+      const e = await res.json().catch(() => ({}));
+      throw new Error(e.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+function logout() {
+  _sessionPin = null;
+  try { localStorage.removeItem('ct_prog_pin'); } catch(e) {}
+  showPinScreen();
+}
+
 // ═══════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════
-let API = localStorage.getItem('cagetrack-api') || '';
 let programme = { plan_start_date: new Date().toISOString().slice(0,10), shifts_per_day: 3, weeks: 4 };
 let meshes = [];
 let cages = [];
@@ -1590,15 +1782,8 @@ function renderScheduleBar() {
 }
 
 // ═══════════════════════════════════════════════════════
-// API HELPERS
+// API HELPERS  (localStorage-backed — no server needed)
 // ═══════════════════════════════════════════════════════
-async function api(path, method = 'GET', body = null) {
-  if (!API) { showToast('Set your Worker URL in Settings ⚙', 'error'); throw new Error('No API'); }
-  const opts = { method, headers: { 'Content-Type': 'application/json' }, ...(body ? { body: JSON.stringify(body) } : {}) };
-  const res = await fetch(API + path, opts);
-  if (!res.ok) { const e = await res.json().catch(() => ({})); throw new Error(e.error || res.statusText); }
-  return res.json();
-}
 
 function showToast(msg, type = 'success') {
   const t = document.getElementById('toast');
@@ -1633,6 +1818,11 @@ async function refreshAll() {
       api('/api/cages'),
       api('/api/programme'),
     ]);
+    // Build the meshes[] sub-array on each cage from mesh.cage_id
+    cages = cages.map(c => ({
+      ...c,
+      meshes: meshes.filter(m => m.cage_id === c.id),
+    }));
     renderDashboard();
     renderMeshTable();
     renderCageTable();
@@ -1641,7 +1831,7 @@ async function refreshAll() {
     if (activeTab === 'programme') renderGantt();
     if (activeTab === 'storage map') renderStorage();
   } catch (e) {
-    if (API) showToast('Error: ' + e.message, 'error');
+    showToast('Error: ' + e.message, 'error');
   }
 }
 
@@ -2788,9 +2978,11 @@ async function saveCage() {
   };
 
   try {
+    let savedCageId;
     if (editCageId) {
       // Simple update — no re-sequencing on edit (shifts_required change handled separately)
       const updated = await api(`/api/cages/${editCageId}`, 'PUT', data);
+      savedCageId = editCageId;
       cages = cages.map(c => c.id === editCageId ? { ...updated, meshes: cages.find(x=>x.id===editCageId)?.meshes || [] } : c);
     } else {
       // INSERT: push all cages after insertion point forward
@@ -2801,6 +2993,7 @@ async function saveCage() {
 
       // Save the new cage first
       const created = await api('/api/cages', 'POST', data);
+      savedCageId = created.id;
       cages.push({ ...created, meshes: [] });
 
       // Re-sequence: update start_shift for all cages after insertion point
@@ -2813,8 +3006,21 @@ async function saveCage() {
       }
     }
 
-    // refresh meshes to reflect status changes
+    // Update mesh cage_id assignments:
+    // Clear cage_id from any meshes that were previously assigned to this cage but aren't now
+    const prevMeshIds = meshes.filter(m => m.cage_id === savedCageId).map(m => m.id);
+    const removedMeshIds = prevMeshIds.filter(id => !selectedMeshIds.includes(id));
+    const addedMeshIds   = selectedMeshIds.filter(id => !prevMeshIds.includes(id));
+    for (const mid of removedMeshIds) {
+      await api(`/api/meshes/${mid}`, 'PUT', { cage_id: null, status: 'planned' });
+    }
+    for (const mid of addedMeshIds) {
+      await api(`/api/meshes/${mid}`, 'PUT', { cage_id: savedCageId, status: 'used' });
+    }
+
+    // Reload meshes and rebuild cage.meshes sub-arrays
     meshes = await api('/api/meshes');
+    cages = cages.map(c => ({ ...c, meshes: meshes.filter(m => m.cage_id === c.id) }));
     closeCageModal();
     renderCageTable(); renderMeshTable(); renderDashboard(); updateHeader();
     if (document.getElementById('page-programme').classList.contains('active')) renderGantt();
@@ -3456,7 +3662,7 @@ function previewSnapshot(snapId) {
 async function restoreSnapshot(snapId) {
   const snap = loadSnapshots().find(s=>s.id===snapId);
   if (!snap) return;
-  if (!confirm(`Restore "${snap.label}"?\n\nThis will overwrite ALL current meshes and cages in the database. This cannot be undone (but you can save a snapshot of the current state first).`)) return;
+  if (!confirm(`Restore "${snap.label}"?\n\nThis will overwrite ALL current meshes and cages. This cannot be undone (but you can save a snapshot of the current state first).`)) return;
 
   // Save a backup snapshot first
   const backupSnaps = loadSnapshots();
@@ -3510,10 +3716,79 @@ function clearAllSnapshots() {
 }
 
 // ═══════════════════════════════════════════════════════
+// EXPORT / IMPORT (backup to/from JSON file)
+// ═══════════════════════════════════════════════════════
+function exportAllData() {
+  const backup = {
+    exportedAt: new Date().toISOString(),
+    version: 2,
+    programme,
+    meshes,
+    cages,
+    snags: loadSnags(),
+    snapshots: loadSnapshots(),
+    offDays: [...offDays],
+  };
+  const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const date = new Date().toISOString().slice(0,10);
+  a.download = 'cagetrack-backup-' + date + '.json';
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Backup exported');
+}
+
+function importAllData() {
+  document.getElementById('import-file-input').click();
+}
+
+function handleImportFile(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (!data.version || !data.meshes || !data.cages) {
+        showToast('Invalid backup file', 'error');
+        return;
+      }
+      const dateStr = data.exportedAt ? new Date(data.exportedAt).toLocaleString('en-GB') : 'unknown date';
+      if (!confirm('Import backup from ' + dateStr + '?\n\nThis will push the backup to the live database. Save a snapshot first if you want to keep the current state.')) return;
+      // Import to API: update programme settings, then bulk-replace meshes and cages
+      try {
+        if (data.programme) await api('/api/programme', 'PUT', data.programme);
+        // Delete existing meshes and cages, then recreate from backup
+        for (const m of meshes) { try { await api(`/api/meshes/${m.id}`, 'DELETE'); } catch(e){} }
+        for (const c of cages)  { try { await api(`/api/cages/${c.id}`,  'DELETE'); } catch(e){} }
+        for (const m of (data.meshes||[])) { try { await api('/api/meshes', 'POST', m); } catch(e){} }
+        for (const c of (data.cages||[]))  { try { await api('/api/cages',  'POST', c); } catch(e){} }
+        if (data.snags) saveSnags(data.snags);
+        if (data.snapshots) saveSnapshots(data.snapshots);
+        if (data.offDays) {
+          offDays = new Set(data.offDays);
+          localStorage.setItem('cagetrack-offdays', JSON.stringify(data.offDays));
+        }
+        await refreshAll();
+        renderAuditLog();
+        showToast('Backup imported');
+      } catch(importErr) {
+        showToast('Import failed: ' + importErr.message, 'error');
+      }
+    } catch(err) {
+      showToast('Failed to parse backup file', 'error');
+    }
+    event.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
+// ═══════════════════════════════════════════════════════
 // SETTINGS
 // ═══════════════════════════════════════════════════════
 function openSettings() {
-  document.getElementById('worker-url').value = API;
   document.getElementById('prog-start').value = programme.plan_start_date || new Date().toISOString().slice(0,10);
   document.getElementById('prog-spd').value = programme.shifts_per_day || 3;
   document.getElementById('prog-weeks').value = programme.weeks || 4;
@@ -3521,33 +3796,7 @@ function openSettings() {
 }
 function closeSettings() { document.getElementById('settings-modal').classList.remove('open'); }
 
-async function testConnection() {
-  const url = document.getElementById('worker-url').value.trim().replace(/\/$/, '');
-  const status = document.getElementById('conn-status');
-  status.style.color = 'var(--muted)';
-  status.textContent = 'Testing…';
-  try {
-    const res = await fetch(url + '/health');
-    const body = await res.json().catch(() => ({}));
-    if (res.ok && body.ok) {
-      status.style.color = 'var(--ok)';
-      status.textContent = '✓ Connected — ' + (body.service || 'Worker OK');
-    } else if (res.ok) {
-      status.style.color = 'var(--ok)';
-      status.textContent = '✓ Worker reachable (HTTP ' + res.status + ')';
-    } else {
-      status.style.color = 'var(--warn)';
-      status.textContent = '✗ HTTP ' + res.status + (body.error ? ': ' + body.error : '');
-    }
-  } catch(e) {
-    status.style.color = 'var(--warn)';
-    status.textContent = '✗ ' + (e.message.includes('fetch') ? 'Cannot reach worker — check URL or CORS' : e.message);
-  }
-}
-
 async function saveProgramme() {
-  const url = document.getElementById('worker-url').value.trim();
-  if (url) { API = url; localStorage.setItem('cagetrack-api', url); }
   const data = {
     plan_start_date: document.getElementById('prog-start').value,
     shifts_per_day: parseInt(document.getElementById('prog-spd').value),
@@ -3565,17 +3814,50 @@ async function saveProgramme() {
 // ═══════════════════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════════════════
-document.addEventListener('DOMContentLoaded', () => {
+document.addEventListener('DOMContentLoaded', async () => {
   document.getElementById('prog-start').value = new Date().toISOString().slice(0,10);
   updateHeader();
   renderScheduleBar();
-  if (API) {
-    refreshAll();
-  } else {
-    showToast('Set your Worker URL in ⚙ Settings to get started', 'error');
-    setTimeout(() => openSettings(), 800);
+
+  // Set up Enter key on PIN input
+  const pinInp = document.getElementById('pin-input');
+  if (pinInp) {
+    pinInp.addEventListener('keydown', e => { if (e.key === 'Enter') submitPin(); });
   }
-  setInterval(() => { if (API) refreshAll(); }, 30000);
+
+  // Check for a cached PIN from today — skip PIN screen if valid
+  try {
+    const cached = JSON.parse(localStorage.getItem('ct_prog_pin') || 'null');
+    if (cached && cached.pin && cached.date === new Date().toISOString().slice(0,10)) {
+      // Try to verify the cached PIN silently
+      const res = await fetch(API_BASE + '/api/auth', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pin: cached.pin })
+      });
+      const data = await res.json();
+      if (data.ok && data.level) {
+        _sessionPin = cached.pin;
+        document.getElementById('pin-overlay').style.display = 'none';
+        document.getElementById('app-wrapper').style.display = 'block';
+        await refreshAll();
+        return;
+      }
+    }
+  } catch(e) {}
+
+  // Check lockout status then show PIN screen
+  try {
+    const res = await fetch(API_BASE + '/api/lockout-status');
+    const data = await res.json();
+    if (data.locked) {
+      showPinScreen('Too many previous attempts.', true, data.remaining);
+    } else {
+      showPinScreen();
+    }
+  } catch(e) {
+    showPinScreen();
+  }
 });
 </script>
 </body>
